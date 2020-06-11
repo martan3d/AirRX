@@ -2,48 +2,54 @@
  * AirRX.c
  *
  * Created: 12/10/2018 8:19:10 PM
- * Author : marta
+ * Author : martan
+ 
+   Airwire DCC plus two Servos
+   
+   This is for the Attiny24/44/84 series 14pin DIP
+  
  */ 
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include "timer1.h"
+
+#include "servotimer.h"
 #include "spi.h"
+#include "dcc.h"
+#include "eedata.h"
 
-#define BACKGROUNDTIME 960
 
-int64_t now;
-int64_t then;
+/*
+ *
+ *   Main Loop. Decode message packets here and do servos
+ *
+ *
+ */
 
 int main(void)
 {
     
-    initTimer1();
-   
-    DDRB = 0x03;                                // Port B, 0,1 as debug outputs
-
-    PORTB &= 0xfe;
-    PORTB |= 1;    
-
+    DDRB |= 0x03;    // PB0, PB1 = outputs
+        
+    dccInit();
+    initServoTimer();
     initializeSPI();
-    
     startModem(0);
     
     sei();                                      // enable interrupts
     
-    then = getMsClock();                        // Grab Current Clock, run the loop at 500ms intervals
-
-    while (1)
+   while (1)
     {
-        now = getMsClock() - then;              // throttle the background loop
         
-        if ( now > BACKGROUNDTIME )             // Run on Schedule, this is lower priority
-        {                                       // First part of loop runs only on scheduled time
-            then = getMsClock();                // Grab Clock Value for next time (if we were going to use it)
-            
-            //PORTB ^= 1;                         // debug!!
-            
-        }
+        /* nothing here right now */
+        
+        /* dcc message come in? */
+        /* Throttle message?
+             do servo stuff
+           CV message?
+             for us?
+                save stuff
+         */
     }
 }
 
