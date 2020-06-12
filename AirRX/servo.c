@@ -10,6 +10,7 @@
 #include <avr/interrupt.h>
 #include <string.h>
 #include "servotimer.h" 
+#include "eedata.h"
 
 
  // servo states
@@ -23,8 +24,8 @@
  #define ENDSERVO     22
 
  #define ONEMS  	  1000	        /* ONE MS 16mhz */
- #define NEXTSCAN	  16*ONEMS      /* 16 ms just will fit into 16 bits */
- #define ENDSCAN      10*ONEMS      /* generic time to wait until next servo */
+ #define NEXTSCAN	  16*ONEMS      /* 16 ms */
+ #define ENDSCAN      10*ONEMS      /* time to wait until next servo */
  #define SERVOSOFF    0xf8          /* bottom three pins are the 3 servo outputs */
  
  #define USTIMER      0x01          /* OVF overflow vector - uS timer */
@@ -39,27 +40,17 @@
 
 static volatile int16_t ServoPulseMs0 = ONEMS;      /* Actual values being clocked out: 1000 min, 2000 max */
 static volatile int16_t ServoPulseMs1 = ONEMS;
-static volatile int16_t ServoPulseMs2 = ONEMS;
-
-static volatile int16_t ServoDefault0 = ONEMS;    /* ADDED to Above for 2000 total */
-static volatile int16_t ServoDefault1 = ONEMS;
-static volatile int16_t ServoDefault2 = ONEMS;
 
 static volatile int16_t ServoHighLimit0 = ONEMS;    /* ADDED to Above for 2000 total */
 static volatile int16_t ServoHighLimit1 = ONEMS;
-static volatile int16_t ServoHighLimit2 = ONEMS;
 
 static volatile int16_t ServoLowLimit0 = 0;         /* ADDED to Above for 1000 total */
 static volatile int16_t ServoLowLimit1 = 0;
-static volatile int16_t ServoLowLimit2 = 0;
 
 static volatile uint8_t servo0Dir = 0;
 static volatile uint8_t servo1Dir = 0;
-static volatile uint8_t servo2Dir = 0;
 
-static volatile int16_t watchDog = 3000;
 static volatile uint8_t servostate;
-
 
  // set up the clock so it runs at 1us per tick
 
@@ -109,12 +100,7 @@ ISR(TIM1_OVF_vect)
 
 ISR(TIM1_COMPB_vect)
 {
-    watchDog = watchDog - 1;
-    if (watchDog < 0)
-        watchDog = 0;
-
     OCR1B = normalMs + TCNT1;     // one ms from where we are
-
 }
 
 /* handle each servo one at a time */
@@ -144,37 +130,15 @@ ISR(TIM1_COMPA_vect)
         case STARTSERVO1:
         PORTA |= SERVO1;
         OCR1A += ServoPulseMs1;
-        servostate = WAITSERVO1;
-        break;
-        
-        case WAITSERVO1:
-        PORTA &= ~(SERVO1);
-        OCR1A += ONEMS;
-        servostate = STARTSERVO2;
-        break;
-
-        case STARTSERVO2:
-        PORTA |= SERVO2;
-        OCR1A += ServoPulseMs2;
         servostate = ENDSERVO;
         break;
-
+        
         case ENDSERVO:
-        PORTA &= ~(SERVO2);
+        PORTA &= ~(SERVO1);
         OCR1A += ENDSCAN;
         servostate = SERVOIDLE;
         break;
     }
-}
-
-int16_t getWatchDog()
-{
-   return watchDog;
-}
-
-void resetWatchDog(int16_t value)
-{
-   watchDog = value;
 }
 
 void setServoPulse(uint8_t i, int16_t pulse)
@@ -202,74 +166,66 @@ void setServoPulse(uint8_t i, int16_t pulse)
                 pulse = pulse * 2;
                 ServoPulseMs1 = pulse + ONEMS;
         break;
-
-        case 2: if(pulse < ServoLowLimit2)  pulse = ServoLowLimit2;
-                if(pulse > ServoHighLimit2) pulse = ServoHighLimit2;
-				if(servo2Dir) pulse = 1000 - pulse;
-				pulse = pulse * 2;    // 16Mhz, double the time
-                ServoPulseMs2 = pulse + ONEMS;
-        break;
-
     }
 }
 
-void setServoDefault0(int16_t sd)
+
+void setServoLow(uint8_t sn, int16_t lo)
 {
-  if((sd >= 0) && (sd <= 1000))
-     ServoDefault0 = sd;
+    switch(sn)
+    {
+        case 0:
+                if((lo >= 0) && (lo <= 1000))
+                   {
+	                 ServoLowLimit0 = lo;
+                     setEEServoLow(0, ServoLowLimit0);
+                   }
+                break;
+        case 1:
+                if((lo >= 0) && (lo <= 1000))
+                   {
+	                  ServoLowLimit1 = lo;
+                      setEEServoLow(1, ServoLowLimit1);
+                   }
+                   break;
+    }                                         
 }
-void setServoDefault1(int16_t sd)
+
+void setServoHigh(uint8_t sn, int16_t hi)
 {
-	if((sd >= 0) && (sd <= 1000))
-	ServoDefault1 = sd;
-}
-void setServoDefault2(int16_t sd)
-{
-	if((sd >= 0) && (sd <= 1000))
-	ServoDefault2 = sd;
+     switch(sn)
+     {
+        case 0:
+               if((hi >= 0) && (hi <= 1000))
+               {
+	              ServoHighLimit0 = hi;
+                  setEEServoHi(0, ServoHighLimit0);
+               }
+               break;                 
+
+        case 1:
+               if((hi >= 0) && (hi <= 1000))
+               {
+                  ServoHighLimit1 = hi;
+                  setEEServoHi(1, ServoHighLimit1);
+               }
+               break;
+     }                                 
 }
 
 
-void setServoLow0(int16_t lo)
+void setServoReverseValue(uint8_t sn, uint8_t direction)
 {
-	if((lo >= 0) && (lo <= 1000))
-	ServoLowLimit0 = lo;
-}
-void setServoLow1(int16_t lo)
-{
-	if((lo >= 0) && (lo <= 1000))
-	ServoLowLimit1 = lo;
-}
-void setServoLow2(int16_t lo)
-{
-	if((lo >= 0) && (lo <= 1000))
-	ServoLowLimit2 = lo;
-}
-
-
-void setServoHigh0(int16_t hi)
-{
-	if((hi >= 0) && (hi <= 1000))
-	ServoHighLimit0 = hi;
-}
-
-void setServoHigh1(int16_t hi)
-{
-	if((hi >= 0) && (hi <= 1000))
-	ServoHighLimit1 = hi;
-}
-void setServoHigh2(int16_t hi)
-{
-	if((hi >= 0) && (hi <= 1000))
-	ServoHighLimit2 = hi;
-}
-
-
-void setServoReverseValue(uint8_t direction)
-{
-  servo0Dir = direction & 1;
-  servo1Dir = direction & 2;
-  servo2Dir = direction & 4;
+  switch(sn)
+  {
+      case 0:
+             servo0Dir = direction;
+             break;
+      case 1:
+             servo1Dir = direction;
+             break;
+  }             
+  setEEServoReverse(sn, direction);
 }
 
 

@@ -20,7 +20,8 @@ int16_t  EEMEM ServoHigh1;
 int16_t  EEMEM ServoLow0;
 int16_t  EEMEM ServoLow1;
 
-uint8_t  EEMEM ServoReverse;
+uint8_t  EEMEM ServoReverse0;
+uint8_t  EEMEM ServoReverse1;
 
 /******************************************************************************/
 uint8_t getEEAirwireChannel()
@@ -109,14 +110,31 @@ void setEEServoLow(uint8_t sn, uint16_t addr)
 }
 
 /******************************************************************************/
-uint8_t getEEServoReverse()
+uint8_t getEEServoReverse(uint8_t sn, uint8_t mode)
 {
     uint8_t eedata = 0;
-    eedata = eeprom_read_byte( (const uint8_t*) &ServoReverse );
+    switch(sn)
+    {
+        case 0:
+               eedata = eeprom_read_byte( (const uint8_t*) &ServoReverse0);
+        break;
+        case 2:
+               eedata = eeprom_read_byte( (const uint8_t*) &ServoReverse1);
+        break;
+    }
     return eedata;
 }
 
-void setEEServoReverse(uint8_t mode)
+void setEEServoReverse(uint8_t sn, uint8_t mode)
 {
-    eeprom_write_byte( (uint8_t*) &ServoReverse, mode );
+    switch(sn)
+    {
+        case 0:
+               eeprom_write_byte( (uint8_t*) &ServoReverse0, mode );
+               break;
+        case 1:
+               eeprom_write_byte( (uint8_t*) &ServoReverse1, mode );
+               break;
+        break;
+    }        
 }
