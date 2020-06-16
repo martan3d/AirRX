@@ -10,20 +10,25 @@ All rights reserved.
 #include <avr/io.h> 
 #include <avr/interrupt.h>
 #include <string.h>
-#include "servotimer.h"
 #include "dcc.h"
+
+void setFlag();
+
 
 #define PREAMBLE 0
 #define START_BIT 1
 #define DATA 2
 #define END_BIT 3
 
+#define RISINGEDGE 4
+#define FALLINGEDGE 5
+
 // Any variables that are used between the ISR and other functions are declared volatile
 unsigned int i;
-int16_t usec;
-int16_t dnow;
+
 uint8_t BitCount;
-uint8_t  State;
+uint8_t State;
+uint8_t iState;
 uint8_t dataByte;
 uint8_t byteCounter;
 uint8_t buffer[sizeof(DCC_MSG)+1];
@@ -31,43 +36,49 @@ uint8_t DccBitVal = 0;
 uint8_t errorByte = 0;
 uint8_t dccbuff[sizeof(DCC_MSG)];
 
-uint8_t * getDCC()
+static volatile int16_t usec;
+static volatile int16_t dnow;
+static volatile int16_t width;
+
+DCC_MSG * getDCC()
 {
-     return(dccbuff);
+     return((DCC_MSG *) dccbuff);
 }
 
 void dccInit(void)
 {
   State  = PREAMBLE;        // Pin change interrupt
-  DDRB   &= ~(0b00001000);  // Pin PB2 is input
-  MCUCR = 0;
-  MCUCR |= (1<<ISC01);      // interupt on any logical change on pin INT0
+  iState = RISINGEDGE;
+  DDRB   &= 0xf7;           // Pin PB2 is input
+  BitCount = 0;
+  MCUCR = 3;                // rising edge
   GIMSK = (1<<INT0);        // EXT INT 0 enabled only
 }
 
-
 ISR(EXT_INT0_vect)
 {
-    /** PORTB 2 is EXT IRQ 0 on Attiny 24/44/84 - INPUT FOR DCC from cc1101 
-	    EXT INT0 gives us an IRQ on both a high and a low change of the input stream */
-	
-    PORTB ^= 1;
-    
-    if(PINB & 0x08)                         // if it's a one, start of pulse
-    {                                       // so, we need to
-        usec = TCNT1;                       //   snag the current time in microseconds
-        return;                             // and that's all we need, exit
-    }    
-    else                                    // else we are at the end of the pulse, on the downside
-    {                                       // how long was the pulse?
-        dnow = TCNT1 - usec;                // Get the now time minus the start time gives pulse width in us
-                                            // Longer pulse is a zero, short is one
-        if ( dnow > 70 )
-            DccBitVal = 0;                  // Longer is a zero
-        else 
-            DccBitVal = 1;                  // short means a one
+    switch(iState)
+    {
+        case RISINGEDGE:
+             usec = TCNT1;
+             MCUCR = 2;                          // Set Falling edge irq
+             iState = FALLINGEDGE;
+        return;
+             
+        case FALLINGEDGE:
+             dnow = TCNT1 - usec;               // Longer pulse is a zero, short is one
+             if ( dnow > 90 )
+              {
+                DccBitVal = 0;                  // Longer is a zero
+              }            
+              else 
+              {
+                DccBitVal = 1;                  // short means a one
+              }
+              MCUCR = 3;
+              iState = RISINGEDGE;              // swap back to IRQ on rising edge for next bit
+        break;        
     }
-    
 
 	/*** after we know if it's a one or a zero, drop through the state machine to see if we are where we think we are in the DCC stream */
     
@@ -141,8 +152,8 @@ ISR(EXT_INT0_vect)
 
                         for (i=0;i<sizeof(DCC_MSG);i++)     // Move message to buffer for background task
                             dccbuff[i] = buffer[i];
-
-                        //setScheduledTask(TASK1);            // Schedule the background task
+                            
+                        setFlag();                         // message flag
                     }
                   break;
                 }
@@ -161,7 +172,7 @@ ISR(EXT_INT0_vect)
                             for (i=0;i<sizeof(DCC_MSG);i++)
                               dccbuff[i] = buffer[i];
 
-                            //setScheduledTask(TASK1);        // Schedule the background task
+                        setFlag();                         // message flag
                         }                        
                    break;
                 }                
@@ -181,7 +192,7 @@ ISR(EXT_INT0_vect)
                         for (i=0;i<sizeof(DCC_MSG);i++)
                             dccbuff[i] = buffer[i];
 
-                        //setScheduledTask(TASK1);            // Schedule the background task
+                        setFlag();                         // message flag
                     }
                   break;
                 }
@@ -197,49 +208,3 @@ ISR(EXT_INT0_vect)
     }
 }
 
-/*
-
-uint8_t rawbuff[7];
-
-uint8_t decodeDCCPacket( DCC_MSG * dccptr)
-{
-    uint8_t l;
-    
-    l = dccptr->Size;       // length of packet
-    
-    switch(l)
-    {
-        case 3:             // three bytes
-        rawbuff[0] = dccptr->Data[0];
-        rawbuff[1] = dccptr->Data[1];
-        rawbuff[2] = dccptr->Data[2];
-        break;
-        
-        case 4:
-        rawbuff[0] = dccptr->Data[0];
-        rawbuff[1] = dccptr->Data[1];
-        rawbuff[2] = dccptr->Data[2];
-        rawbuff[3] = dccptr->Data[3];
-        break;
-        
-        case 5:
-        rawbuff[0] = dccptr->Data[0];
-        rawbuff[1] = dccptr->Data[1];
-        rawbuff[2] = dccptr->Data[2];
-        rawbuff[3] = dccptr->Data[3];
-        rawbuff[4] = dccptr->Data[4];
-        break;
-
-        case 6:
-        rawbuff[0] = dccptr->Data[0];
-        rawbuff[1] = dccptr->Data[1];
-        rawbuff[2] = dccptr->Data[2];
-        rawbuff[3] = dccptr->Data[3];
-        rawbuff[4] = dccptr->Data[4];
-        rawbuff[5] = dccptr->Data[5];
-        break;
-    }
-
-    return l;
-}
-*/
