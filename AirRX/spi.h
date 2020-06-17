@@ -9,6 +9,7 @@
 #ifndef SPI_H_
 #define SPI_H_
 
+#define SPI_PORT PORTA
 #define SPI_DDR_PORT DDRA
 #define USCK_DD_PIN DDA4
 #define DO_DD_PIN DDA5

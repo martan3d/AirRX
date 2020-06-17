@@ -13,15 +13,36 @@
  */
 
 uint8_t  EEMEM AirwireChannel;               /* Radio RX channel */
-uint16_t EEMEM DCCAddress;
+uint16_t EEMEM DCCAddress;                   /* Our DCC address */
 
-int16_t  EEMEM ServoHigh0;
+uint8_t  EEMEM ServoMode;
+
+int16_t  EEMEM ServoHigh0;                   /* Servo Limits */
 int16_t  EEMEM ServoHigh1;
 int16_t  EEMEM ServoLow0;
 int16_t  EEMEM ServoLow1;
 
-uint8_t  EEMEM ServoReverse0;
+uint8_t  EEMEM ServoReverse0;                /* Servo Reverse */
 uint8_t  EEMEM ServoReverse1;
+
+uint8_t  EEMEM functionOutput0;              /* Function Code to trigger outputs */
+uint8_t  EEMEM functionOutput1;
+uint8_t  EEMEM functionState0;               /* Output States */
+uint8_t  EEMEM functionState1;
+
+
+/******************************************************************************/
+uint8_t getEEServoMode()
+{
+    uint8_t eedata = 0;
+    eedata = eeprom_read_byte( (const uint8_t*) &ServoMode);
+    return eedata;
+}
+
+void setEEServoMode(uint8_t mode)
+{
+     eeprom_write_byte( (uint8_t*) &ServoMode, mode );
+}
 
 /******************************************************************************/
 uint8_t getEEAirwireChannel()
@@ -110,7 +131,7 @@ void setEEServoLow(uint8_t sn, uint16_t addr)
 }
 
 /******************************************************************************/
-uint8_t getEEServoReverse(uint8_t sn, uint8_t mode)
+uint8_t getEEServoReverse(uint8_t sn)
 {
     uint8_t eedata = 0;
     switch(sn)

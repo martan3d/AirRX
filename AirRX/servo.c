@@ -156,14 +156,12 @@ void setServoPulse(uint8_t i, int16_t pulse)
         case 0: if(pulse < ServoLowLimit0)  pulse = ServoLowLimit0;
                 if(pulse > ServoHighLimit0) pulse = ServoHighLimit0;
                 if(servo0Dir) pulse = 1000 - pulse;
-                pulse = pulse * 2;    // 16Mhz, double the time
                 ServoPulseMs0 = pulse + ONEMS;
         break;
 
         case 1: if(pulse < ServoLowLimit1)  pulse = ServoLowLimit1;
                 if(pulse > ServoHighLimit1) pulse = ServoHighLimit1;
 				if(servo1Dir) pulse = 1000 - pulse;
-                pulse = pulse * 2;
                 ServoPulseMs1 = pulse + ONEMS;
         break;
     }

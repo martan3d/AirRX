@@ -34,16 +34,19 @@ uint8_t byteCounter;
 uint8_t buffer[sizeof(DCC_MSG)+1];
 uint8_t DccBitVal = 0;
 uint8_t errorByte = 0;
-uint8_t dccbuff[sizeof(DCC_MSG)];
+
+static volatile uint8_t dccbuff[sizeof(DCC_MSG)];
 
 static volatile int16_t usec;
 static volatile int16_t dnow;
 static volatile int16_t width;
 
-DCC_MSG * getDCC()
+void getDCC(volatile uint8_t * databuffer)
 {
-     return((DCC_MSG *) dccbuff);
+    for (int i=0; i<7; i++)
+         databuffer[i] = dccbuff[i];
 }
+
 
 void dccInit(void)
 {

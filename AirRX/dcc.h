@@ -35,7 +35,7 @@ typedef struct
 } DCC_MSG ;
 
 void dccInit(void);
-DCC_MSG * getDCC();
+void getDCC(volatile uint8_t * databuffer);
 uint8_t decodeDCCPacket( DCC_MSG * dccptr);
 uint16_t getTransitionCount();
 void resetTransitionCount(uint16_t count);
