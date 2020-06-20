@@ -27,8 +27,103 @@ uint8_t  EEMEM ServoReverse1;
 
 uint8_t  EEMEM functionOutput0;              /* Function Code to trigger outputs */
 uint8_t  EEMEM functionOutput1;
-uint8_t  EEMEM functionState0;               /* Output States */
+uint8_t  EEMEM functionState0;               /* Output States when OFF */
 uint8_t  EEMEM functionState1;
+
+uint8_t  EEMEM couplerFunction0;             /* function codes to activate coupler servos */
+uint8_t  EEMEM couplerFunction1;
+
+/******************************************************************************/
+uint8_t getEECouplerfunctionCode(uint8_t f)
+{
+    uint8_t eedata = 0;
+    switch(f)
+    {
+        case 0:
+        eedata = eeprom_read_byte( (const uint8_t*) &couplerFunction0);
+        break;
+        case 1:
+        eedata = eeprom_read_byte( (const uint8_t*) &couplerFunction1);
+        break;
+    }
+    return eedata;
+}
+
+void setEECouplerfunctionCode(uint8_t f, uint8_t mode)
+{
+    switch(f)
+    {
+        case 0:
+        eeprom_write_byte( (uint8_t*) &couplerFunction0, mode );
+        break;
+        case 1:
+        eeprom_write_byte( (uint8_t*) &couplerFunction1, mode );
+        break;
+    }
+}
+
+
+/******************************************************************************/
+uint8_t getEEfunctionState(uint8_t f)
+{
+    uint8_t eedata = 0;
+    switch(f)
+    {
+        case 0:
+                eedata = eeprom_read_byte( (const uint8_t*) &functionState0);
+        break;
+        case 1:
+                eedata = eeprom_read_byte( (const uint8_t*) &functionState1);
+        break;
+    }
+    return eedata;
+}
+
+void setEEFunctionState(uint8_t f, uint8_t mode)
+{
+    switch(f)
+    {
+        case 0:
+                eeprom_write_byte( (uint8_t*) &functionState0, mode );
+        break;
+        case 1:
+                eeprom_write_byte( (uint8_t*) &functionState1, mode );
+        break;
+    }
+}
+
+
+/******************************************************************************/
+uint8_t getEEfunctionOutput(uint8_t f)
+{
+    uint8_t eedata = 0;
+    switch(f)
+    {
+        case 0:
+                eedata = eeprom_read_byte( (const uint8_t*) &functionOutput0);
+                break;
+        case 1:
+                eedata = eeprom_read_byte( (const uint8_t*) &functionOutput1);
+        break;
+    }
+    return eedata;
+}
+
+void setEEFunctionOutput(uint8_t f, uint8_t mode)
+{
+    switch(f)
+    {
+        case 0:
+                eeprom_write_byte( (uint8_t*) &functionOutput0, mode );
+                break;
+        case 1:
+                eeprom_write_byte( (uint8_t*) &functionOutput1, mode );
+        break;
+    }
+}
+
+
+
 
 
 /******************************************************************************/

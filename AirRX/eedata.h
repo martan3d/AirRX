@@ -21,5 +21,12 @@ uint8_t getEEServoReverse(uint8_t sn);
 void setEEServoReverse(uint8_t sn, uint8_t mode);
 uint8_t getEEServoMode();
 void setEEServoMode(uint8_t mode);
+uint8_t getEEfunctionState(uint8_t f);
+void setEEFunctionState(uint8_t f, uint8_t mode);
+uint8_t getEEfunctionOutput(uint8_t f);
+void setEEFunctionOutput(uint8_t f, uint8_t mode);
+uint8_t getEECouplerfunctionCode(uint8_t f);
+void setEECouplerfunctionCode(uint8_t f, uint8_t mode);
+
 
 #endif /* EEDATA_H_ */

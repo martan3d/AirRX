@@ -47,6 +47,7 @@ void getDCC(volatile uint8_t * databuffer)
          databuffer[i] = dccbuff[i];
 }
 
+/* DCC Receive - Collect DCC bitstream into bytes for processing */
 
 void dccInit(void)
 {
@@ -109,7 +110,7 @@ ISR(EXT_INT0_vect)
                 BitCount = 0 ;              // otherwise sit here and wait on the preamble
         break;
         
-        //--------------------------------- Pramble Finished, wait on the start bit
+        //---------------------------------    Preamble Finished, wait on the start bit
 
         case START_BIT:                     // preamble at least almost done, wait for the start of the data
              if(!DccBitVal)
