@@ -53,6 +53,8 @@ uint8_t couplerFuncCode0 = 0;
 uint8_t couplerFuncCode1 = 0;
 
 uint8_t fcode = 0;
+                  //     00  01  02  03  04  05  06  07  08  09  10  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27  28  29  30  31
+uint8_t stepTable[]  = {  0,  0,  1,  3,  5,  7,  9, 11, 13, 15, 17, 19, 21, 23, 25, 27,  0,  0,  2,  4,  6, 8,  10, 12, 14, 16, 18, 20, 22, 24, 26, 28 };
 
 #define FORWARD 0
 #define REVERSE 1
@@ -71,7 +73,7 @@ int8_t checkFunctionCodes(uint8_t ourcode, uint8_t f, uint8_t d)
         //                                      |||_____ F3
         //                                      ||______ F4
         //                                      |_______ F0/FL
-        
+
         switch(ourcode)
         {
             case 0:
@@ -239,24 +241,24 @@ void checkOurFunctionCodes()
                if (functionstate0 == 1)     // check off state, if one, flip to off
                    PORTA &= 0xfb;
                 else
-                   PORTA |= 0x40;            // if off state is zero, its on now
+                   PORTA |= 0x04;            // if off state is zero, its on now
                
-               if (functionstate0 == 0)     // check off state, if zero, flip to on
-                   PORTA |= 0x40;            // if off state is zero, its on now
+               if (functionstate0 == 0)      // check off state, if zero, flip to on
+                   PORTA |= 0x04;            // if off state is zero, its on now
                 else
                    PORTA &= 0xfb;
              }
              else
              {
                if (functionstate0 == 1)     // check off state, if one, flip to off
-                   PORTA |= 0x40;            // if off state is zero, its on now
+                   PORTA |= 0x04;            // if off state is zero, its on now
                else
                    PORTA &= 0xfb;
               
                if (functionstate0 == 0)     // check off state, if zero, flip to on
                    PORTA &= 0xfb;
                else
-                   PORTA |= 0x40;            // if off state is zero, its on now
+                   PORTA |= 0x04;            // if off state is zero, its on now
             }
       }
                          
@@ -267,29 +269,35 @@ void checkOurFunctionCodes()
        {
          if (fcode == 1)
              {
-               if (functionstate0 == 1)     // check off state, if one, flip to off
+               if (functionstate1 == 1)     // check off state, if one, flip to off
                    PORTA &= 0xf7;
                  else
-                   PORTA |= 0x80;            // if off state is zero, its on now
+                   PORTA |= 0x08;            // if off state is zero, its on now
                
-               if (functionstate0 == 0)     // check off state, if zero, flip to on
-                   PORTA |= 0x80;            // if off state is zero, its on now
+               if (functionstate1 == 0)     // check off state, if zero, flip to on
+                   PORTA |= 0x08;            // if off state is zero, its on now
                  else
                    PORTA &= 0xf7;
              }
             else
              {
-               if (functionstate0 == 1)     // check off state, if one, flip to off
-                   PORTA |= 0x80;            // if off state is zero, its on now
+               if (functionstate1 == 1)     // check off state, if one, flip to off
+                   PORTA |= 0x08;            // if off state is zero, its on now
                  else
                    PORTA &= 0xf7;
               
-               if (functionstate0 == 0)     // check off state, if zero, flip to on
+               if (functionstate1 == 0)     // check off state, if zero, flip to on
                    PORTA &= 0xf7;
                  else
-                   PORTA |= 0x80;            // if off state is zero, its on now
+                   PORTA |= 0x08;            // if off state is zero, its on now
              }
        }
+                         
+             
+    /* don't care about couplers if not in coupler mode */
+                         
+    if (servomode != 1)
+      return;
                          
     /* did the coupler function code come in for coupler 0 */
                          
@@ -302,13 +310,13 @@ void checkOurFunctionCodes()
              setServoPulse(0, servolow0);
        }
 
-   fcode = checkFunctionCodes(couplerFuncCode0, rawbuff[1], rawbuff[2]);
+   fcode = checkFunctionCodes(couplerFuncCode1, rawbuff[1], rawbuff[2]);
    if( fcode != -1)
       {
           if (fcode == 1)
-             setServoPulse(0, servohigh0);  // if function code is a 1, highlimit
+             setServoPulse(1, servohigh0);  // if function code is a 1, highlimit
           else
-             setServoPulse(0, servolow0);
+             setServoPulse(1, servolow0);
       }
 }
 
@@ -336,21 +344,18 @@ void checkOurFunctionCodes()
 
 static volatile uint16_t temp;
 
-void checkConfigurationCode(uint8_t * c)
+void checkConfigurationCode(uint8_t addr, uint8_t data)
 {
     // data is  1110CCVV VVVVVVVV DDDDDDDD
     // this assumes address is ok and c[0] is beginning of data
     
     uint16_t cvd;
-    
-    if( (c[0] & 0xf0) == 0xe0)
-    {
-        // configuration write instruction ?
-        if((c[0] & 0x0c) == 0x0c)
-        {
-            cvd = c[2];                    // radio channel, check bounds
 
-            switch(c[1])
+            cvd = data;                    // radio channel, check bounds
+
+            addr ++;     // DCC sends address - 1
+
+            switch(addr)
             {
                 case 200:
                           if(cvd < 0)  cvd = 0;
@@ -359,6 +364,7 @@ void checkConfigurationCode(uint8_t * c)
                           break;
                           
                 case 201: // Power level?  Not used
+                          PORTB ^= 2;
                           break;
                           
                 case 202: // DCC address low byte
@@ -442,12 +448,13 @@ void checkConfigurationCode(uint8_t * c)
                           if(cvd > 1) cvd = 1;
                           setEEFunctionState(1, cvd);
                           break;
-
-            }
         }
-    }
     
 }
+
+
+
+
 
 /*
  * Setup only, initialize the EEPROM with defaults
@@ -464,11 +471,11 @@ void initEEPROM()
     setEEServoLow(1, 0);
     setEEServoReverse(0, 0);
     setEEServoReverse(1, 0);
-    setEEServoMode(1);
-    setEEFunctionOutput(0,12);
-    setEEFunctionOutput(1,12);
-    setEEFunctionState(0,0);
-    setEEFunctionState(1,0);
+    setEEServoMode(2);
+    setEEFunctionOutput(0,4);
+    setEEFunctionOutput(1,4);
+    setEEFunctionState(0,1);
+    setEEFunctionState(1,1);
     setEECouplerfunctionCode(0,16);
     setEECouplerfunctionCode(1,16);
 }
@@ -484,17 +491,29 @@ int main(void)
     //int i;
        
     DDRB |= 0x03;    // PB0, PB1 = outputs
+    DDRA |= 0x0f;    // PA0-PA3 outputs
     
-    //initEEPROM();    // TEMPORARY SETUP ONLY
+    initEEPROM();    // ***** TEMPORARY SETUP ONLY
 
     // restore all from EEPROM
         
     radioChannel   = getEEAirwireChannel();
     dccaddress     = getEEDCCAddress();
+    
     functioncode0  = getEEfunctionOutput(0);
     functioncode1  = getEEfunctionOutput(1);
-    functionstate0 = getEEfunctionState(0);
-    functionstate1 = getEEfunctionState(1);
+    
+    functionstate0 = getEEfunctionState(0) & 1;
+    functionstate1 = getEEfunctionState(1) & 1;
+    
+    // set outputs to default states
+    
+    PORTA &= 0xfb;   // output x
+    PORTA |= (functionstate0 << 2);
+    
+    PORTA &= 0xf7;
+    PORTA |= (functionstate1 << 3);
+        
     servolow0      = getEEServoLow(0);
     servolow1      = getEEServoLow(1);
     servohigh0     = getEEServoHi(0);
@@ -538,6 +557,7 @@ int main(void)
         
         if (flagbyte)
         {
+
             getDCC(rawbuff);                       // pass our buffer to dcc to retrieve data
 
             /************************************* MUST be in 128 step mode */
@@ -548,19 +568,36 @@ int main(void)
             
             switch(msglen)
             {            
-                         // three byte message, what is it, Function codes?
+                         // three byte message, what is it?
                 case 3:
+                         // if idle message, just bag it right now
+                         if (rawbuff[0] == 0xff)
+                            break;
+                
                          rxaddress = rawbuff[0];               // match our address?
                          if (rxaddress != dccaddress)
                              break;                            // nope, skip
+                             
                          ouraddress = TRUE;
+                         
+                         if( (rawbuff[1] & 0x40) == 0x040)     // 28 Speed instruction?
+                         {
+                             dccspeed = stepTable[rawbuff[1] & 0x1f] * 4;
+                             if (rawbuff[1] & 0x20)
+                                   direction = FORWARD;
+                                else
+                                   direction = REVERSE;
+                                   
+                             break;
+                         }
+                         
                          checkOurFunctionCodes();
+                         
                       break;
                 
-                
-                        // check short address throttle packet or long address function (both are 4 length)
-                case 4:   
-                        if (rawbuff[1] == 0x3f)   // must be 128 step mode throttle packet
+      
+                case 4: // Extended Packet?  Function or 128 throttle?
+                        if (rawbuff[1] == 0x3f)        // must be 128 step mode throttle packet
                            {
                              rxaddress = rawbuff[0];   // match our address?
                              if (rxaddress != dccaddress)
@@ -577,9 +614,38 @@ int main(void)
                              break;
                            }
                            
-                           if (ouraddress)
-                              checkOurFunctionCodes();
+                         // Next choice, perhaps it is a regular 28 speed packet with long address?
+                                    
+                         if( (rawbuff[2] & 0x40) == 0x40)     // 28 Speed instruction?
+                           {
+                             rxaddress = rawbuff[0];
+                             rxaddress = dccaddress << 8;
+                             rxaddress |= rawbuff[1];
+                        
+                             if (rxaddress != dccaddress)
+                                break;
+
+                             ouraddress = TRUE;
+
+                             dccspeed = stepTable[rawbuff[2] & 0x1f] * 4;
+                             if (rawbuff[1] & 0x20)
+                                   direction = FORWARD;
+                                else
+                                   direction = REVERSE;
+                             break;
+                           }                           
                            
+                           // none of the above, last choice is long address function code or config
+                           
+                           rxaddress = rawbuff[0];
+                           rxaddress = dccaddress << 8;
+                           rxaddress |= rawbuff[1];
+                             
+                           if (rxaddress != dccaddress)
+                             break;
+                                                      
+                           checkOurFunctionCodes();
+   
                            break;
                          
                 case 5:                           // long address
@@ -601,7 +667,52 @@ int main(void)
                              dccspeed = dccspeed & 0x7f;
                              break;
                           }
+                          
+                          // config?
+                          if (rawbuff[1] == 0xec)     // Configuration write?
+                          {
+                             rxaddress = rawbuff[0];  // short address
+                             if (rxaddress != dccaddress)
+                               break;
+                               
+                               for(int i=0;i<6;i++)                    // send it out on the soft uart
+                               {
+                                   while(1)
+                                   {
+                                       if(UART_tx(rawbuff[i]))
+                                       break;
+                                   }
+                               }
+                               
+                              
+                             checkConfigurationCode(rawbuff[2], rawbuff[3]);
+                          }
                           break;
+
+                case 6:
+                          // config?
+                          if (rawbuff[2] == 0xec)     // Configuration write?
+                          {
+                             rxaddress = rawbuff[0];        // long address
+                             rxaddress = dccaddress << 8;
+                             rxaddress |= rawbuff[1];
+                             if (rxaddress != dccaddress)
+                               break;
+                               
+                               for(int i=0;i<6;i++)                    // send it out on the soft uart
+                               {
+                                   while(1)
+                                   {
+                                       if(UART_tx(rawbuff[i]))
+                                       break;
+                                   }
+                               }
+                              
+                             checkConfigurationCode(rawbuff[2], rawbuff[3]);
+                          }
+
+
+            
             }
             
             /* message for our DCC address came in, process it */
@@ -642,6 +753,16 @@ int main(void)
                     break;
                 }
             }      /* end of DCC message received, clear flag and wait for another */
+            /*
+            for(int i=0;i<6;i++)                    // send it out on the soft uart
+            {
+                while(1)
+                {
+                    if(UART_tx(rawbuff[i]))
+                    break;
+                }
+            }
+            */
             
             flagbyte = 0;
         }

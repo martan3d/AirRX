@@ -156,7 +156,7 @@ ISR(EXT_INT0_vect)
 
                         for (i=0;i<sizeof(DCC_MSG);i++)     // Move message to buffer for background task
                             dccbuff[i] = buffer[i];
-                            
+                        
                         setFlag();                         // message flag
                     }
                   break;

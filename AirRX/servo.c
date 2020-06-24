@@ -26,7 +26,7 @@
  #define ONEMS  	  1018	        /* ONE MS 16mhz */
  #define NEXTSCAN	  16*ONEMS      /* 16 ms */
  #define ENDSCAN      10*ONEMS      /* time to wait until next servo */
- #define SERVOSOFF    0xf8          /* bottom three pins are the 3 servo outputs */
+ #define SERVOSOFF    0xfc          /* bottom three pins are the 3 servo outputs */
  
  #define USTIMER      0x01          /* OVF overflow vector - uS timer */
  #define SERVOTIMER   0x02          /* COMPA vector - servos */
@@ -34,7 +34,6 @@
 
  #define SERVO0       0x01          /* define servo outputs port bits */
  #define SERVO1       0x02
- #define SERVO2       0x04
 
 /* Handle Three Servo outputs on PORTA bits 0-2 */
 
