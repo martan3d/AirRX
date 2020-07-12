@@ -22,6 +22,8 @@
 static volatile uint8_t rawbuff[7];
 static volatile uint8_t flagbyte;
 
+#define DEBUG 1
+
 void setFlag()
 {
     flagbyte = 1;
@@ -60,6 +62,20 @@ uint8_t stepTable[]  = {  0,  0,  1,  3,  5,  7,  9, 11, 13, 15, 17, 19, 21, 23,
 #define REVERSE 1
 #define TRUE 1
 #define FALSE 0
+
+
+void sendDebug()
+{
+    for(int i=0;i<6;i++)                    // send it out on the soft uart
+    {
+        while(1)
+        {
+            if(UART_tx(rawbuff[i]))
+            break;
+        }
+    }
+}
+
 
 /* function code came in, do we care? Check our stored function code, did it come in? */
 
@@ -321,142 +337,6 @@ void checkOurFunctionCodes()
 }
 
 /*
- * Decode message packets here and do servos and config variables
- *
- *   CV 200 - Radio Channel 0-15
- *   CV 201 - Radio Power Code
- *   CV 202 - DCC Address lo
- *   CV 203 - DCC Address hi
- *   CV 204 - Servo Mode 0=Steam, 1=couplers, 2=ESC
- *   CV 205 - Servo0 LowLimit Lo
- *   CV 206 - Servo0 LowLimit Hi
- *   CV 207 - Servo0 HighLimit Lo
- *   CV 208 - Servo0 HighLimit Hi
- *   CV 209 - Servo1 LowLimit Lo
- *   CV 210 - Servo1 LowLimit Hi
- *   CV 211 - Servo1 HighLimit Lo
- *   CV 212 - Servo1 HighLimit Hi
- *   CV 213 - Function Code for Output x
- *   CV 214 - Function Code for Output y
- *   CV 215 - On/Off Code for Output x
- *   CV 216 - On/Off Code for Output y
- */
-
-static volatile uint16_t temp;
-
-void checkConfigurationCode(uint8_t addr, uint8_t data)
-{
-    // data is  1110CCVV VVVVVVVV DDDDDDDD
-    // this assumes address is ok and c[0] is beginning of data
-    
-    uint16_t cvd;
-
-            cvd = data;                    // radio channel, check bounds
-
-            addr ++;     // DCC sends address - 1
-
-            switch(addr)
-            {
-                case 200:
-                          if(cvd < 0)  cvd = 0;
-                          if(cvd > 15) cvd = 15;
-                          setEEAirwireChannel(cvd);
-                          break;
-                          
-                case 201: // Power level?  Not used
-                          PORTB ^= 2;
-                          break;
-                          
-                case 202: // DCC address low byte
-                          temp &= 0xff00;
-                          temp |= cvd;
-                          setEEDCCAddress(temp);
-                          break;  
-                          
-                case 203: // DCC address high byte
-                          temp &= 0x00ff;
-                          temp |= (cvd<<8);
-                          setEEDCCAddress(temp);
-                          break;
-                          
-                case 204: // Servo Mode
-                          if(cvd<0) cvd = 0;
-                          if(cvd>2) cvd = 2;
-                          setEEServoMode(cvd);
-                          break;
-                          
-                case 205: // Servo 0 Low Limit low byte - do this one first
-                          temp = cvd;
-                          break;
-                          
-                case 206: // Servo 0 Low Limit high byte - when high byte comes in, write to EEPROM
-                          temp &= 0x00ff;
-                          temp |= (cvd<<8);
-                          setEEServoLow(0, temp);
-                          break;
-                                       
-                case 207: // Servo 1 Low Limit low byte - do this one first
-                          temp = cvd;
-                          break;
-                          
-                case 208: // Servo 1 Low Limit high byte - when high byte comes in, write to EEPROM
-                          temp &= 0x00ff;
-                          temp |= (cvd<<8);
-                          setEEServoLow(1, temp);
-                          break;
-
-                case 209: // Servo 0 High Limit low byte - do this one first
-                          temp = cvd;
-                          break;
-                          
-                case 210: // Servo 0 High Limit high byte - when high byte comes in, write to EEPROM
-                          temp &= 0x00ff;
-                          temp |= (cvd<<8);
-                          setEEServoHi(0, temp);
-                          break;
-                                       
-                case 211: // Servo 1 High Limit low byte - do this one first
-                          temp = cvd;
-                          break;
-                          
-                case 212: // Servo 1 High Limit high byte - when high byte comes in, write to EEPROM
-                          temp &= 0x00ff;
-                          temp |= (cvd<<8);
-                          setEEServoHi(1, temp);
-                          break;
-                          
-                case 213:
-                          if(cvd < 0)  cvd = 0;
-                          if(cvd > 28) cvd = 28;
-                          setEECouplerfunctionCode(0, cvd);
-                          break;
-
-                case 214:
-                          if(cvd < 0)  cvd = 0;
-                          if(cvd > 28) cvd = 28;
-                          setEECouplerfunctionCode(1, cvd);
-                          break;
-
-                case 215:
-                          if(cvd < 0) cvd = 0;
-                          if(cvd > 1) cvd = 1;
-                          setEEFunctionState(0, cvd);
-                          break;
-
-                case 216:
-                          if(cvd < 0) cvd = 0;
-                          if(cvd > 1) cvd = 1;
-                          setEEFunctionState(1, cvd);
-                          break;
-        }
-    
-}
-
-
-
-
-
-/*
  * Setup only, initialize the EEPROM with defaults
  *
  */
@@ -480,6 +360,193 @@ void initEEPROM()
     setEECouplerfunctionCode(1,16);
 }
 
+/*
+ * Decode message packets here and do servos and config variables
+ *
+ *   CV 201 - Radio Channel 0-15
+ *   CV 202 - DCC Address lo
+ *   CV 203 - DCC Address hi
+ *   CV 204 - Servo Mode 0=Steam, 1=couplers, 2=ESC
+ *   CV 205 - Servo0 LowLimit Lo
+ *   CV 206 - Servo0 LowLimit Hi
+ *   CV 207 - Servo0 HighLimit Lo
+ *   CV 208 - Servo0 HighLimit Hi
+ *   CV 209 - Servo0 Reverse
+ *   CV 210 - Servo1 LowLimit Lo
+ *   CV 211 - Servo1 LowLimit Hi
+ *   CV 212 - Servo1 HighLimit Lo
+ *   CV 213 - Servo1 HighLimit Hi
+ *   CV 214 - Servo1 Reverse
+ *   CV 215 - Function Code for Coupler 0
+ *   CV 216 - Function Code for Coupler 1
+ *   CV 217 - Function Code for Output x
+ *   CV 218 - Function Code for Output y
+ *   CV 219 - On/Off Code for Output x
+ *   CV 220 - On/Off Code for Output y
+ *   CV 230 - Reset to factory defaults
+ */
+
+static volatile uint16_t temp;
+
+void checkConfigurationCode(uint8_t addr, uint8_t data)
+{
+    // command is  1110CCVV VVVVVVVV DDDDDDDD
+    
+    uint16_t cvd;
+    uint8_t mdata;
+    
+            cvd = data;                    // radio channel, check bounds
+            mdata = data;
+            
+            addr ++;     // DCC sends address - 1
+
+            switch(addr)
+            {
+                case 201:
+                          if(mdata < 0)  break;
+                          if(mdata > 16) break;
+                          setEEAirwireChannel(mdata);
+                          radioChannel = mdata;
+                          startModem(radioChannel);
+                          break;
+                          
+                case 202: // DCC address low byte
+                          temp &= 0xff00;
+                          temp |= cvd;
+                          break;  
+                          
+                case 203: // DCC address high byte
+                          temp &= 0x00ff;
+                          temp |= (cvd<<8);
+                          setEEDCCAddress(temp);
+                          dccaddress = temp;
+                          break;
+                          
+                case 204: // Servo Mode
+                          if(cvd<0) break;
+                          if(cvd>2) break;
+                          setEEServoMode(cvd);
+                          servomode = cvd;
+                          break;
+                          
+                          // **** Servo 0 Limits and Reverse *******
+                          
+                case 205: // Servo 0 Low Limit low byte - do this one first
+                          temp = cvd;
+                          break;
+                          
+                case 206: // Servo 0 Low Limit high byte - when high byte comes in, write to EEPROM
+                          temp &= 0x00ff;
+                          temp |= (cvd<<8);
+                          setEEServoLow(0, temp);
+                          setServoPulse(0, temp);
+                          servolow0 = temp;
+                          break;
+                                       
+                case 207: // Servo 0 High Limit low byte - do this one first
+                          temp = cvd;
+                          break;
+                          
+                case 208: // Servo 0 High Limit high byte - when high byte comes in, write to EEPROM
+                          temp &= 0x00ff;
+                          temp |= (cvd<<8);
+                          setEEServoHi(0, temp);
+                          setServoPulse(0, temp);
+                          servohigh0 = temp;
+                          break;
+
+                case 209: if (cvd>1) break;
+                          if (cvd<0) break;
+                          setEEServoReverse(0, cvd);
+                          servoreverse0 = cvd;
+                          break;
+                
+                
+                          // ***** Servo 1 Low Limit, High Limit, reverse *******
+                
+                case 210: // Servo 1 Low Limit low byte - do this one first
+                          temp = cvd;
+                          break;
+                          
+                case 211: // Servo 1 Low Limit high byte - when high byte comes in, write to EEPROM
+                          temp &= 0x00ff;
+                          temp |= (cvd<<8);
+                          setEEServoLow(1, temp);
+                          setServoPulse(1, temp);
+                          servolow1 = temp;
+                          break;
+                                       
+                case 212: // Servo 1 High Limit low byte - do this one first
+                          temp = cvd;
+                          break;
+                          
+                case 213: // Servo 1 High Limit high byte - when high byte comes in, write to EEPROM
+                          temp &= 0x00ff;
+                          temp |= (cvd<<8);
+                          setEEServoHi(1, temp);
+                          setServoPulse(1, temp);
+                          servohigh1 = temp;
+                          break;
+                          
+                case 214: if (cvd>1) break;
+                          if (cvd<0) break;
+                          setEEServoReverse(1, cvd);
+                          servoreverse1 = cvd;
+                          break;
+
+                          
+                          //*** Servo 0 Coupler Mode FUNCTION CODE *****
+                case 215:
+                          if(cvd < 0)  break;
+                          if(cvd > 28) break;
+                          setEECouplerfunctionCode(0, cvd);
+                          break;
+
+                          //*** Servo 1 Coupler Mode FUNCTION CODE *******
+                case 216:
+                          if(cvd < 0)  break;
+                          if(cvd > 28) break;
+                          setEECouplerfunctionCode(1, cvd);
+                          break;
+
+                case 217: // ***** Function code for OUTPUT X ****
+                          if(cvd < 0)  break;
+                          if(cvd > 28) break;
+                          setEEFunctionOutput(0,cvd);
+                          functioncode0 = cvd;
+                          break;
+
+                case 218: // ***** Function code for OUTPUT Y ***
+                          if(cvd < 0)  break;
+                          if(cvd > 28) break;
+                          setEEFunctionOutput(1,cvd);
+                          functioncode1 = cvd;
+                          break;
+
+                          // **** Digital Outputs default (OFF) State
+                case 219:
+                          if(cvd < 0) cvd = 0;
+                          if(cvd > 1) cvd = 1;
+                          setEEFunctionState(0, cvd);
+                          break;
+
+                case 220:
+                          if(cvd < 0) cvd = 0;
+                          if(cvd > 1) cvd = 1;
+                          setEEFunctionState(1, cvd);
+                          break;
+                          
+                          // ******** FACTORY RESET
+                case 230:
+                          initEEPROM();
+                          break;
+        }
+}
+
+
+
+
+
 /* 
  * Main Loop
  *
@@ -493,7 +560,11 @@ int main(void)
     DDRB |= 0x03;    // PB0, PB1 = outputs
     DDRA |= 0x0f;    // PA0-PA3 outputs
     
-    initEEPROM();    // ***** TEMPORARY SETUP ONLY
+    if(getEEProgrammed() != 0)   /** First time power up, set all to defaults **/
+    {
+        initEEPROM();  
+        setEEProgrammed(0);
+    }        
 
     // restore all from EEPROM
         
@@ -513,6 +584,8 @@ int main(void)
     
     PORTA &= 0xf7;
     PORTA |= (functionstate1 << 3);
+    
+    // Load up servo values from EEPROM
         
     servolow0      = getEEServoLow(0);
     servolow1      = getEEServoLow(1);
@@ -524,7 +597,9 @@ int main(void)
     
     couplerFuncCode0 = getEECouplerfunctionCode(0);
     couplerFuncCode1 = getEECouplerfunctionCode(1);
-        
+    
+    // Set Servo outputs to startup states depending on mode
+    
     switch(servomode )
     {
         case 0:                               // servomode = 0 Steam
@@ -547,9 +622,12 @@ int main(void)
     startModem(radioChannel);
     dccInit();
     
-    UART_init();  // software usart, for debug only, take this out for production
+    UART_init();  // ****** software usart, for debug only, take this out for production
         
     sei();                                   // enable interrupts
+
+
+    /**************************************************************************************************************/
     
     while (1)
     {
@@ -674,16 +752,6 @@ int main(void)
                              rxaddress = rawbuff[0];  // short address
                              if (rxaddress != dccaddress)
                                break;
-                               
-                               for(int i=0;i<6;i++)                    // send it out on the soft uart
-                               {
-                                   while(1)
-                                   {
-                                       if(UART_tx(rawbuff[i]))
-                                       break;
-                                   }
-                               }
-                               
                               
                              checkConfigurationCode(rawbuff[2], rawbuff[3]);
                           }
@@ -698,16 +766,7 @@ int main(void)
                              rxaddress |= rawbuff[1];
                              if (rxaddress != dccaddress)
                                break;
-                               
-                               for(int i=0;i<6;i++)                    // send it out on the soft uart
-                               {
-                                   while(1)
-                                   {
-                                       if(UART_tx(rawbuff[i]))
-                                       break;
-                                   }
-                               }
-                              
+
                              checkConfigurationCode(rawbuff[2], rawbuff[3]);
                           }
 
@@ -752,19 +811,11 @@ int main(void)
                               }
                     break;
                 }
-            }      /* end of DCC message received, clear flag and wait for another */
-            /*
-            for(int i=0;i<6;i++)                    // send it out on the soft uart
-            {
-                while(1)
-                {
-                    if(UART_tx(rawbuff[i]))
-                    break;
-                }
-            }
-            */
+            }      
             
+            /* end of DCC message process, clear flag and wait for another */
             flagbyte = 0;
+            
         }
     }
 }

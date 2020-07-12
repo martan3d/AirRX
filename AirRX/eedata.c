@@ -33,6 +33,22 @@ uint8_t  EEMEM functionState1;
 uint8_t  EEMEM couplerFunction0;             /* function codes to activate coupler servos */
 uint8_t  EEMEM couplerFunction1;
 
+uint8_t  EEMEM eeProgrammed;
+
+/******************************************************************************/
+uint8_t getEEProgrammed()
+{
+    uint8_t eedata = 0;
+    eedata = eeprom_read_byte( (const uint8_t*) &eeProgrammed);
+    return eedata;
+}
+
+void setEEProgrammed(uint8_t mode)
+{
+    eeprom_write_byte( (uint8_t*) &eeProgrammed, mode );
+}
+
+
 /******************************************************************************/
 uint8_t getEECouplerfunctionCode(uint8_t f)
 {

@@ -44,7 +44,7 @@ uint8_t initDataA[48] = {0x40, 0x2E, 0x2E, 0x0D, 0x07, 0xD3, 0x91, 0xFF,
 // Channels designations are 0-16.  These are the corresponding values
 // for the CC1101.
 uint8_t channels[17] = {0x4B, 0x45, 0x33, 0x27, 0x1B, 0x15, 0x0F, 0x03, 0x5E,
-                        0x58, 0x52, 0x3E, 0x39, 0x2C, 0x21, 0x89, 0x37};
+                        0x58, 0x52, 0x3E, 0x39, 0x2C, 0x21, 0x09, 0x37};
 
 // Transmitter power settings are designated 0-10.  These are the corresponding
 // PATABLE entries to set these powers.
@@ -113,9 +113,9 @@ void startModem(uint8_t channel)
 
     PORTA &= ~SPI_LATCH;
     spi_transfer(CHAN);              // Channel Command
-    PORTA |= SPI_LATCH;
+    //PORTA |= SPI_LATCH;
 
-    PORTA &= ~SPI_LATCH;
+    //PORTA &= ~SPI_LATCH;
     spi_transfer(channelCode);
     PORTA |= SPI_LATCH;
  
