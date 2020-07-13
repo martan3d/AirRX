@@ -330,9 +330,9 @@ void checkOurFunctionCodes()
    if( fcode != -1)
       {
           if (fcode == 1)
-             setServoPulse(1, servohigh0);  // if function code is a 1, highlimit
+             setServoPulse(1, servohigh1);  // if function code is a 1, highlimit
           else
-             setServoPulse(1, servolow0);
+             setServoPulse(1, servolow1);
       }
 }
 
@@ -395,7 +395,7 @@ void checkConfigurationCode(uint8_t addr, uint8_t data)
     uint16_t cvd;
     uint8_t mdata;
     
-            cvd = data;                    // radio channel, check bounds
+            cvd = data;
             mdata = data;
             
             addr ++;     // DCC sends address - 1
@@ -411,15 +411,32 @@ void checkConfigurationCode(uint8_t addr, uint8_t data)
                           break;
                           
                 case 202: // DCC address low byte
-                          temp &= 0xff00;
-                          temp |= cvd;
+                          temp = mdata;
                           break;  
                           
                 case 203: // DCC address high byte
                           temp &= 0x00ff;
+                          mdata = cvd & 0x00ff;
                           temp |= (cvd<<8);
                           setEEDCCAddress(temp);
                           dccaddress = temp;
+
+                mdata = temp & 0x00ff;
+
+                while(1)
+                {
+                    if(UART_tx(mdata))
+                    break;
+                }
+                
+                mdata = temp >> 8;
+
+                while(1)
+                {
+                    if(UART_tx(mdata))
+                    break;
+                }
+
                           break;
                           
                 case 204: // Servo Mode
@@ -555,15 +572,23 @@ void checkConfigurationCode(uint8_t addr, uint8_t data)
 
 int main(void)
 {
-    //int i;
        
-    DDRB |= 0x03;    // PB0, PB1 = outputs
+    DDRB &= 0xfd;    // PB1 = input
+    PORTB |= 0x02;   // Pull up
+    DDRB |= 0x01;    // PB0 = output
     DDRA |= 0x0f;    // PA0-PA3 outputs
     
     if(getEEProgrammed() != 0)   /** First time power up, set all to defaults **/
     {
         initEEPROM();  
         setEEProgrammed(0);
+    }
+    
+    // check port pin B2 - if low, initialize EEPROM *** USER FACTORY RESET  ***  NEED to test this
+    
+    if ( (PINB & 0x02) == 0 )
+    {
+        initEEPROM();
     }        
 
     // restore all from EEPROM
@@ -622,7 +647,7 @@ int main(void)
     startModem(radioChannel);
     dccInit();
     
-    UART_init();  // ****** software usart, for debug only, take this out for production
+//    UART_init();  // ****** software usart, for debug only, take this out for production
         
     sei();                                   // enable interrupts
 
@@ -635,15 +660,10 @@ int main(void)
         
         if (flagbyte)
         {
-
             getDCC(rawbuff);                       // pass our buffer to dcc to retrieve data
-
-            /************************************* MUST be in 128 step mode */
-
             msglen = rawbuff[5];                   // get length of message
-
             ouraddress = FALSE;                    // plan to fail
-            
+
             switch(msglen)
             {            
                          // three byte message, what is it?
@@ -691,13 +711,13 @@ int main(void)
                              dccspeed = dccspeed & 0x7f;
                              break;
                            }
-                           
+
                          // Next choice, perhaps it is a regular 28 speed packet with long address?
-                                    
+ 
                          if( (rawbuff[2] & 0x40) == 0x40)     // 28 Speed instruction?
                            {
-                             rxaddress = rawbuff[0];
-                             rxaddress = dccaddress << 8;
+                             rxaddress = rawbuff[0] & 0x0f;
+                             rxaddress = rxaddress << 8;
                              rxaddress |= rawbuff[1];
                         
                              if (rxaddress != dccaddress)
@@ -706,17 +726,16 @@ int main(void)
                              ouraddress = TRUE;
 
                              dccspeed = stepTable[rawbuff[2] & 0x1f] * 4;
-                             if (rawbuff[1] & 0x20)
+                             if (rawbuff[2] & 0x20)
                                    direction = FORWARD;
                                 else
                                    direction = REVERSE;
                              break;
                            }                           
                            
-                           // none of the above, last choice is long address function code or config
-                           
-                           rxaddress = rawbuff[0];
-                           rxaddress = dccaddress << 8;
+                           // none of the above, last choice is long address function code
+                           rxaddress = rawbuff[0] & 0x0f;
+                           rxaddress = rxaddress << 8;
                            rxaddress |= rawbuff[1];
                              
                            if (rxaddress != dccaddress)
@@ -727,16 +746,17 @@ int main(void)
                            break;
                          
                 case 5:                           // long address
-                        if(rawbuff[2] == 0x3f)   // must be 128 step mode throttle packet
+                        if(rawbuff[2] == 0x3f)   // 128 step mode throttle packet?
                           {
-                             rxaddress = rawbuff[0];
-                             rxaddress = dccaddress << 8;
+                             rxaddress = rawbuff[0] & 0x0f;
+                             rxaddress = rxaddress << 8;
                              rxaddress |= rawbuff[1];
                         
                              if (rxaddress != dccaddress)
                                 break;
                         
                              ouraddress = TRUE;
+                             
                              dccspeed = rawbuff[3];
                              if (dccspeed & 0x80)
                                 direction = FORWARD;
@@ -761,24 +781,22 @@ int main(void)
                           // config?
                           if (rawbuff[2] == 0xec)     // Configuration write?
                           {
-                             rxaddress = rawbuff[0];        // long address
-                             rxaddress = dccaddress << 8;
+                             rxaddress = rawbuff[0] & 0x0f;        // long address
+                             rxaddress = rxaddress << 8;
                              rxaddress |= rawbuff[1];
                              if (rxaddress != dccaddress)
                                break;
 
-                             checkConfigurationCode(rawbuff[2], rawbuff[3]);
+                             checkConfigurationCode(rawbuff[3], rawbuff[4]);
                           }
-
-
-            
+                          break;
             }
             
             /* message for our DCC address came in, process it */
             
             if(ouraddress)
             {
-                switch(servomode)
+                switch(servomode)    // coupler mode is handled in function codes
                 {
                     case 0:                                 // Steam mode?
                             if (direction == FORWARD)       // for live steam, servo 1 is direction

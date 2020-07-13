@@ -53,7 +53,7 @@ void dccInit(void)
 {
   State  = PREAMBLE;        // Pin change interrupt
   iState = RISINGEDGE;
-  DDRB   &= 0xf7;           // Pin PB2 is input
+  DDRB   &= 0xf7;           // Pin PB2 is input  ?? FIXME?
   BitCount = 0;
   MCUCR = 3;                // rising edge
   GIMSK = (1<<INT0);        // EXT INT 0 enabled only
@@ -200,6 +200,29 @@ ISR(EXT_INT0_vect)
                     }
                   break;
                 }
+
+                if (byteCounter == 6)						// Six Bytes
+                {
+                    errorByte  = buffer[0];                 // Compute checksum (xor) across all
+                    errorByte ^= buffer[1];
+                    errorByte ^= buffer[2];
+                    errorByte ^= buffer[3];
+                    errorByte ^= buffer[4];
+
+                    if (errorByte == buffer[5])             // if it matches, valid message came in
+                    {
+                        buffer[5] = byteCounter;        	// (cheat) save length over cksum
+                        buffer[6] = 0;
+
+                        for (i=0;i<sizeof(DCC_MSG);i++)
+                        dccbuff[i] = buffer[i];
+
+                        setFlag();                         // message flag
+                    }
+                    break;
+                }
+
+
 
             }
             else  // Get next Byte

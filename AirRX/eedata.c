@@ -13,27 +13,24 @@
  */
 
 uint8_t  EEMEM AirwireChannel;               /* Radio RX channel */
-uint16_t EEMEM DCCAddress;                   /* Our DCC address */
-
 uint8_t  EEMEM ServoMode;
-
-int16_t  EEMEM ServoHigh0;                   /* Servo Limits */
-int16_t  EEMEM ServoHigh1;
-int16_t  EEMEM ServoLow0;
-int16_t  EEMEM ServoLow1;
-
 uint8_t  EEMEM ServoReverse0;                /* Servo Reverse */
 uint8_t  EEMEM ServoReverse1;
-
 uint8_t  EEMEM functionOutput0;              /* Function Code to trigger outputs */
 uint8_t  EEMEM functionOutput1;
 uint8_t  EEMEM functionState0;               /* Output States when OFF */
 uint8_t  EEMEM functionState1;
-
 uint8_t  EEMEM couplerFunction0;             /* function codes to activate coupler servos */
 uint8_t  EEMEM couplerFunction1;
-
 uint8_t  EEMEM eeProgrammed;
+
+uint16_t  EEMEM DCCAddress;                   /* Our DCC address */
+uint16_t  EEMEM ServoHigh0;                   /* Servo Limits */
+uint16_t  EEMEM ServoHigh1;
+uint16_t  EEMEM ServoLow0;
+uint16_t  EEMEM ServoLow1;
+
+
 
 /******************************************************************************/
 uint8_t getEEProgrammed()
