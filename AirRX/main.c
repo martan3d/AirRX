@@ -420,7 +420,7 @@ void checkConfigurationCode(uint8_t addr, uint8_t data)
                           temp |= (cvd<<8);
                           setEEDCCAddress(temp);
                           dccaddress = temp;
-
+/*
                 mdata = temp & 0x00ff;
 
                 while(1)
@@ -436,7 +436,7 @@ void checkConfigurationCode(uint8_t addr, uint8_t data)
                     if(UART_tx(mdata))
                     break;
                 }
-
+*/
                           break;
                           
                 case 204: // Servo Mode
@@ -476,9 +476,9 @@ void checkConfigurationCode(uint8_t addr, uint8_t data)
                           if (cvd<0) break;
                           setEEServoReverse(0, cvd);
                           servoreverse0 = cvd;
+                          setServoReverseValue(0, cvd);
                           break;
-                
-                
+                                
                           // ***** Servo 1 Low Limit, High Limit, reverse *******
                 
                 case 210: // Servo 1 Low Limit low byte - do this one first
@@ -509,8 +509,8 @@ void checkConfigurationCode(uint8_t addr, uint8_t data)
                           if (cvd<0) break;
                           setEEServoReverse(1, cvd);
                           servoreverse1 = cvd;
+                          setServoReverseValue(1, cvd);
                           break;
-
                           
                           //*** Servo 0 Coupler Mode FUNCTION CODE *****
                 case 215:
@@ -578,6 +578,8 @@ int main(void)
     DDRB |= 0x01;    // PB0 = output
     DDRA |= 0x0f;    // PA0-PA3 outputs
     
+    //initEEPROM();
+    
     if(getEEProgrammed() != 0)   /** First time power up, set all to defaults **/
     {
         initEEPROM();  
@@ -617,7 +619,11 @@ int main(void)
     servohigh0     = getEEServoHi(0);
     servohigh1     = getEEServoHi(1);
     servoreverse0  = getEEServoReverse(0);
+    setServoReverseValue(0, servoreverse0);
+    
     servoreverse1  = getEEServoReverse(1);
+    setServoReverseValue(1, servoreverse1);
+    
     servomode      = getEEServoMode();
     
     couplerFuncCode0 = getEECouplerfunctionCode(0);
@@ -639,6 +645,7 @@ int main(void)
         
         case 2:                               // ESC - center off
             setServoPulse(0, 500);            // ESC Center off is middle of servo pulse 0-1000
+            setServoPulse(1,servolow1);
         break;
     }    
         
@@ -647,7 +654,7 @@ int main(void)
     startModem(radioChannel);
     dccInit();
     
-//    UART_init();  // ****** software usart, for debug only, take this out for production
+   // UART_init();  // ****** software usart, for debug only, take this out for production
         
     sei();                                   // enable interrupts
 
@@ -671,7 +678,7 @@ int main(void)
                          // if idle message, just bag it right now
                          if (rawbuff[0] == 0xff)
                             break;
-                
+
                          rxaddress = rawbuff[0];               // match our address?
                          if (rxaddress != dccaddress)
                              break;                            // nope, skip
