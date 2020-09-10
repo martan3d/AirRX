@@ -474,9 +474,9 @@ void checkConfigurationCode(uint8_t addr, uint8_t data)
 
                 case 209: if (cvd>1) break;
                           if (cvd<0) break;
-                          setEEServoReverse(0, cvd);
                           servoreverse0 = cvd;
                           setServoReverseValue(0, cvd);
+                          setEEServoReverse(0, cvd);
                           break;
                                 
                           // ***** Servo 1 Low Limit, High Limit, reverse *******
@@ -507,9 +507,9 @@ void checkConfigurationCode(uint8_t addr, uint8_t data)
                           
                 case 214: if (cvd>1) break;
                           if (cvd<0) break;
-                          setEEServoReverse(1, cvd);
                           servoreverse1 = cvd;
                           setServoReverseValue(1, cvd);
+                          setEEServoReverse(1, cvd);
                           break;
                           
                           //*** Servo 0 Coupler Mode FUNCTION CODE *****

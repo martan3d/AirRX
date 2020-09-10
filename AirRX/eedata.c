@@ -247,7 +247,7 @@ uint8_t getEEServoReverse(uint8_t sn)
         case 0:
                eedata = eeprom_read_byte( (const uint8_t*) &ServoReverse0);
         break;
-        case 2:
+        case 1:
                eedata = eeprom_read_byte( (const uint8_t*) &ServoReverse1);
         break;
     }

@@ -222,7 +222,6 @@ void setServoReverseValue(uint8_t sn, uint8_t direction)
              servo1Dir = direction;
              break;
   }             
-  setEEServoReverse(sn, direction);
 }
 
 
