@@ -418,8 +418,12 @@ void checkConfigurationCode(uint8_t addr, uint8_t data)
                           temp &= 0x00ff;
                           mdata = cvd & 0x00ff;
                           temp |= (cvd<<8);
-                          setEEDCCAddress(temp);
-                          dccaddress = temp;
+                          
+                          if(temp < 10240)       // Max DCC address
+                          {
+                            setEEDCCAddress(temp);
+                            dccaddress = temp;
+                          }                          
 /*
                 mdata = temp & 0x00ff;
 
@@ -572,7 +576,7 @@ void checkConfigurationCode(uint8_t addr, uint8_t data)
 
 int main(void)
 {
-       
+      
     DDRB &= 0xfd;    // PB1 = input
     PORTB |= 0x02;   // Pull up
     DDRB |= 0x01;    // PB0 = output
@@ -587,7 +591,7 @@ int main(void)
     }
     
     // check port pin B2 - if low, initialize EEPROM *** USER FACTORY RESET  ***  NEED to test this
-    
+ 
     if ( (PINB & 0x02) == 0 )
     {
         initEEPROM();
@@ -654,10 +658,12 @@ int main(void)
     startModem(radioChannel);
     dccInit();
     
-   // UART_init();  // ****** software usart, for debug only, take this out for production
+    //UART_init();  // ****** software usart, for debug only, take this out for production
         
     sei();                                   // enable interrupts
 
+
+    //while(1) { if(UART_tx(ttl)) break; }
 
     /**************************************************************************************************************/
     
@@ -670,7 +676,7 @@ int main(void)
             getDCC(rawbuff);                       // pass our buffer to dcc to retrieve data
             msglen = rawbuff[5];                   // get length of message
             ouraddress = FALSE;                    // plan to fail
-
+            
             switch(msglen)
             {            
                          // three byte message, what is it?
@@ -702,6 +708,9 @@ int main(void)
                 
       
                 case 4: // Extended Packet?  Function or 128 throttle?
+                
+                        //while(1) { if(UART_tx(rawbuff[0])) break; }
+                
                         if (rawbuff[1] == 0x3f)        // must be 128 step mode throttle packet
                            {
                              rxaddress = rawbuff[0];   // match our address?
@@ -723,7 +732,7 @@ int main(void)
  
                          if( (rawbuff[2] & 0x40) == 0x40)     // 28 Speed instruction?
                            {
-                             rxaddress = rawbuff[0] & 0x0f;
+                             rxaddress = rawbuff[0] & 0x3f;   ///   **** 0x1f
                              rxaddress = rxaddress << 8;
                              rxaddress |= rawbuff[1];
                         
@@ -741,7 +750,7 @@ int main(void)
                            }                           
                            
                            // none of the above, last choice is long address function code
-                           rxaddress = rawbuff[0] & 0x0f;
+                           rxaddress = rawbuff[0] & 0x3f;  //0x1f
                            rxaddress = rxaddress << 8;
                            rxaddress |= rawbuff[1];
                              
@@ -755,7 +764,7 @@ int main(void)
                 case 5:                           // long address
                         if(rawbuff[2] == 0x3f)   // 128 step mode throttle packet?
                           {
-                             rxaddress = rawbuff[0] & 0x0f;
+                             rxaddress = rawbuff[0] & 0x3f;    ///// 0x1f
                              rxaddress = rxaddress << 8;
                              rxaddress |= rawbuff[1];
                         
@@ -788,7 +797,7 @@ int main(void)
                           // config?
                           if (rawbuff[2] == 0xec)     // Configuration write?
                           {
-                             rxaddress = rawbuff[0] & 0x0f;        // long address
+                             rxaddress = rawbuff[0] & 0x3f;        // long address
                              rxaddress = rxaddress << 8;
                              rxaddress |= rawbuff[1];
                              if (rxaddress != dccaddress)
