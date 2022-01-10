@@ -62,6 +62,10 @@ uint8_t stepTable[]  = {  0,  0,  1,  3,  5,  7,  9, 11, 13, 15, 17, 19, 21, 23,
 #define REVERSE 1
 #define TRUE 1
 #define FALSE 0
+#define STEAM 0
+#define COUPLERS 1
+#define ESC 2
+#define PWM 3
 
 
 void sendDebug()
@@ -351,7 +355,7 @@ void initEEPROM()
     setEEServoLow(1, 0);
     setEEServoReverse(0, 0);
     setEEServoReverse(1, 0);
-    setEEServoMode(2);
+    setEEServoMode(0);
     setEEFunctionOutput(0,4);
     setEEFunctionOutput(1,4);
     setEEFunctionState(0,1);
@@ -424,28 +428,11 @@ void checkConfigurationCode(uint8_t addr, uint8_t data)
                             setEEDCCAddress(temp);
                             dccaddress = temp;
                           }                          
-/*
-                mdata = temp & 0x00ff;
-
-                while(1)
-                {
-                    if(UART_tx(mdata))
-                    break;
-                }
-                
-                mdata = temp >> 8;
-
-                while(1)
-                {
-                    if(UART_tx(mdata))
-                    break;
-                }
-*/
                           break;
                           
                 case 204: // Servo Mode
                           if(cvd<0) break;
-                          if(cvd>2) break;
+                          if(cvd>3) break;       // allow pwm mode now
                           setEEServoMode(cvd);
                           servomode = cvd;
                           break;
@@ -565,9 +552,6 @@ void checkConfigurationCode(uint8_t addr, uint8_t data)
 }
 
 
-
-
-
 /* 
  * Main Loop
  *
@@ -622,6 +606,7 @@ int main(void)
     servolow1      = getEEServoLow(1);
     servohigh0     = getEEServoHi(0);
     servohigh1     = getEEServoHi(1);
+
     servoreverse0  = getEEServoReverse(0);
     setServoReverseValue(0, servoreverse0);
     
@@ -635,25 +620,33 @@ int main(void)
     
     // Set Servo outputs to startup states depending on mode
     
-    switch(servomode )
+    switch(servomode)
     {
-        case 0:                               // servomode = 0 Steam
+        case STEAM:                           // servomode = 0 Steam
+            initServoTimer(1);
             setServoPulse(0,servolow0);
             setServoPulse(1,servohigh1);      // high limit is forward
         break;
         
-        case 1:
+        case COUPLERS:
+            initServoTimer(1);
             setServoPulse(0,servolow0);       // Coupler mode
             setServoPulse(1,servolow1);       // low limit is couplers normal
         break;
         
-        case 2:                               // ESC - center off
+        case ESC:                             // ESC - center off
+            initServoTimer(1);
             setServoPulse(0, 500);            // ESC Center off is middle of servo pulse 0-1000
             setServoPulse(1,servolow1);
         break;
+        
+        case PWM:
+             initPWM();
+             initServoTimer(0);
+             direction = FORWARD;
+        break;        
     }    
         
-    initServoTimer();
     initializeSPI();
     startModem(radioChannel);
     dccInit();
@@ -663,19 +656,17 @@ int main(void)
     sei();                                   // enable interrupts
 
 
-    //while(1) { if(UART_tx(ttl)) break; }
-
     /**************************************************************************************************************/
     
     while (1)
     {
         /* wait for DCC message to be constructed via interrupt */
-        
+      
         if (flagbyte)
         {
             getDCC(rawbuff);                       // pass our buffer to dcc to retrieve data
             msglen = rawbuff[5];                   // get length of message
-            ouraddress = FALSE;                    // plan to fail
+            ouraddress = FALSE;                    // plan to ignore
             
             switch(msglen)
             {            
@@ -689,19 +680,19 @@ int main(void)
                          if (rxaddress != dccaddress)
                              break;                            // nope, skip
                              
-                         ouraddress = TRUE;
+                         ouraddress = TRUE;                    // yes, this message is for us
                          
                          if( (rawbuff[1] & 0x40) == 0x040)     // 28 Speed instruction?
                          {
                              dccspeed = stepTable[rawbuff[1] & 0x1f] * 4;
                              if (rawbuff[1] & 0x20)
-                                   direction = FORWARD;
-                                else
+                                   direction = FORWARD;        // translate the 28 step to 128
+                                else                           // everything internal to this code is 128 now
                                    direction = REVERSE;
                                    
                              break;
                          }
-                         
+                        
                          checkOurFunctionCodes();
                          
                       break;
@@ -709,22 +700,20 @@ int main(void)
       
                 case 4: // Extended Packet?  Function or 128 throttle?
                 
-                        //while(1) { if(UART_tx(rawbuff[0])) break; }
-                
-                        if (rawbuff[1] == 0x3f)        // must be 128 step mode throttle packet
+                        if (rawbuff[1] == 0x3f)           // must be 128 step mode throttle packet
                            {
-                             rxaddress = rawbuff[0];   // match our address?
+                             rxaddress = rawbuff[0];      // match our address?
                              if (rxaddress != dccaddress)
-                                break;                 // nope, bail
+                                break;                    // nope, bail
                         
-                             ouraddress = TRUE;
-                             dccspeed = rawbuff[2];    // get speed and direction
+                             ouraddress = TRUE;           // sent 128 step instruction, no action required
+                             dccspeed = rawbuff[2];       // get speed and direction
                              if (dccspeed & 0x80)
                                 direction = FORWARD;
                              else
                                 direction = REVERSE;
 
-                             dccspeed = dccspeed & 0x7f;
+                             dccspeed = dccspeed & 0x7f;  // remove the direction bit from the speed value
                              break;
                            }
 
@@ -739,7 +728,7 @@ int main(void)
                              if (rxaddress != dccaddress)
                                 break;
 
-                             ouraddress = TRUE;
+                             ouraddress = TRUE;               
 
                              dccspeed = stepTable[rawbuff[2] & 0x1f] * 4;
                              if (rawbuff[2] & 0x20)
@@ -814,7 +803,7 @@ int main(void)
             {
                 switch(servomode)    // coupler mode is handled in function codes
                 {
-                    case 0:                                 // Steam mode?
+                    case STEAM:                             // Steam mode?
                             if (direction == FORWARD)       // for live steam, servo 1 is direction
                                setServoPulse(1,servohigh1); // high limit is forward
                             else
@@ -826,23 +815,32 @@ int main(void)
                             setServoPulse(0,s);             // send throttle value to servo
                     break;
                     
-                    case 2:                                // Center off ESC mode
-                              if (direction == FORWARD)
-                              {
-                                 s = dccspeed;
-                                 s = (s*4) + 500;
-                                 if (s>1000) s = 1000;     // since channel 0 servo is also throttle via servo or ESC, set it same as DCC
-                                 if (s<0) s = 0;           // make sure we don't exceed limits
-                                 setServoPulse(0,s);       // send throttle value to servo
-                              }
-                              else
-                              {
-                                s = dccspeed;
-                                s = 500 - (s*4);
-                                if (s>1000) s = 1000;
-                                if (s<0) s = 0;
-                                setServoPulse(0,s);
-                              }
+                    case ESC:                               // Center off ESC mode
+                            if (direction == FORWARD)
+                            {
+                               s = dccspeed;
+                               s = (s*4) + 500;
+                               if (s>1000) s = 1000;     // since channel 0 servo is also throttle via servo or ESC, set it same as DCC
+                               if (s<0) s = 0;           // make sure we don't exceed limits
+                               setServoPulse(0,s);       // send throttle value to servo
+                            }
+                            else
+                            {
+                              s = dccspeed;
+                              s = 500 - (s*4);
+                              if (s>1000) s = 1000;
+                              if (s<0) s = 0;
+                              setServoPulse(0,s);
+                            }
+                    break;
+                    
+                    case PWM:
+                            if (direction == FORWARD)
+                               PORTA |= 0x02;
+                            else
+                               PORTA &= ~0x02;
+
+                            setPWM(dccspeed);
                     break;
                 }
             }      

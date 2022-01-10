@@ -23,7 +23,7 @@
  #define WAITSERVO2   18
  #define ENDSERVO     22
 
- #define ONEMS  	  1018	        /* ONE MS 16mhz */
+ #define ONEMS  	  1018	        /* ONE MS 8mhz */
  #define NEXTSCAN	  16*ONEMS      /* 16 ms */
  #define ENDSCAN      10*ONEMS      /* time to wait until next servo */
  #define SERVOSOFF    0xfc          /* bottom three pins are the 3 servo outputs */
@@ -53,17 +53,64 @@ static volatile uint8_t servostate;
 
  // set up the clock so it runs at 1us per tick
 
-static volatile uint16_t msClockHigh;
-static volatile uint32_t msUpper;
+static volatile uint16_t msClock;
+static volatile uint16_t msUpper;
 
 uint16_t normalMs = ONEMS;
 
-/* starts both the servo cycle and the master 1us clock source */
 
-void initServoTimer(void)
+/* starts the PWM output */
+
+void initPWM(void)
 {
-     msClockHigh = 0;
-     msUpper     = 0;
+    TCCR0A = 0;     // take the defaults
+    TCCR0B = 0x02;  // clock divide by 8
+    OCR0B  = 100;   // compare register
+    TIMSK0 |= 0x04;  // enable timer compare B  (A is used by softuart)
+}
+
+uint8_t wavdir = 0;
+uint8_t pwmHigh = 5;
+uint8_t pwmLow  = 250;
+
+/* PWM Output on Servo 0 if configured */
+
+ISR(TIM0_COMPB_vect)
+{
+    wavdir ^= 1;
+    if (wavdir)
+    {
+        OCR0B = pwmHigh;
+        PORTA |= SERVO0;
+    }        
+    else
+    {
+        OCR0B = pwmLow;
+        PORTA &= ~SERVO0;
+    }           
+    TCNT0 = 0;
+    
+}
+
+
+/* pwm low and high */
+
+void setPWM(uint8_t pw)
+{
+    pw ++;
+    if (pw>124) pw = 124;
+    pwmHigh = pw;
+    pwmLow  = 0x7f - pw;
+}
+
+/* starts both the servo cycle and the master 1ms clock source */
+
+void initServoTimer(uint8_t mode)
+{
+    if (mode) mode = SERVOTIMER;
+    
+     msClock = 0;
+     msUpper = 0;
 
      DDRA = 0x0f;
     
@@ -76,30 +123,34 @@ void initServoTimer(void)
      TCCR1B = 0;
      TCNT1  = 0;
 
-     TCCR1B |= 0x02;			                     // clock select, divide sysclock by 8
-     TIMSK1 |= USTIMER | SERVOTIMER | COMPAREB;      // enable interrupts 
-
-     // Overflow and OCR interrupts, let timer run until overflow, keep track of upper word in s/w 
+     TCCR1B |= 0x02;			               // clock select, divide sysclock by 8
+     TIMSK1 |= mode | COMPAREB;                // enable timer1 A & B interrupts, A is servo, B is millisecond clock
 }
 
 
-/* Master Clock Source                                  */
-/* ------------------------ 64 bits of microseconds --- */
-/*   msUpper 32bits   MsClockHigh 16bits  TCLK 16bits   */
-/*   0000 0000        0000                0000          */
-/*                                                      */
-/*   292471 years before it rolls over                  */
+/* Master Clock Source                            */
+/* ------------ 32 bits of milliseconds --------- */
+/*   msUpper 16bits   MsClockHigh 16bits          */
+/*           0000                 0000            */
 
-ISR(TIM1_OVF_vect)
-{
-    msClockHigh++;
-    if(msClockHigh == 0)
-       msUpper++;
-}
 
 ISR(TIM1_COMPB_vect)
 {
     OCR1B = normalMs + TCNT1;     // one ms from where we are
+    
+    msClock++;
+    if(msClock == 0)
+       msUpper++;
+}
+
+uint32_t clockVal;
+
+uint32_t getMSClock()
+{
+    clockVal = msUpper;
+    clockVal = clockVal << 16;
+    clockVal |= msClock;
+    return clockVal;
 }
 
 /* handle each servo one at a time */

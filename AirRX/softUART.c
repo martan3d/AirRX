@@ -17,10 +17,10 @@
 volatile uint16_t tx_shift_reg = 0;
 
 // 9600
-//#define TIMERVALUE 104
+#define TIMERVALUE 104
 
 // 38400
-#define TIMERVALUE 25
+//#define TIMERVALUE 25
 
 uint8_t UART_tx(char character)
 {
