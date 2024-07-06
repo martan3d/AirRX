@@ -17,7 +17,7 @@ void setServoLow(uint8_t sn, int16_t lo);
 void setServoHigh(uint8_t sn, int16_t hi);
 void setServoReverseValue(uint8_t sn, uint8_t direction);
 uint32_t getMSClock();
-void setPWM(uint8_t pw);
+void setPWM(uint8_t pw, uint8_t dir);
 void initPWM(void);
 
 

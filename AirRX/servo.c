@@ -8,6 +8,7 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/pgmspace.h>
 #include <string.h>
 #include "servotimer.h" 
 #include "eedata.h"
@@ -59,48 +60,82 @@ static volatile uint16_t msUpper;
 uint16_t normalMs = ONEMS;
 
 
+const uint8_t pulseLo[] PROGMEM = {255, 255, 255, 255, 255, 245, 245, 245, 245, 245, 235, 235, 235, 235, 235, 225, 225, 225, 225, 225, 215, 215, 215, 215, 215, 205, 205, 205, 205, 205, 195, 195, 195, 195, 195, 185, 185, 185, 185, 185, 175, 175, 175, 175, 175, 165, 165, 165, 165, 165, 155, 155, 155, 155, 155, 145, 145, 145, 145, 145, 135, 135, 135, 135, 135, 125, 125, 125, 125, 125, 115, 115, 115, 115, 115, 105, 105, 105, 105, 105, 95, 95, 95, 95, 95, 85, 85, 85, 85, 85, 75, 75, 75, 75, 75, 65, 65, 65, 65, 65, 55, 55, 55, 55, 55, 45, 45, 45, 45, 45, 35, 35, 35, 35, 35, 25, 25, 25, 25, 25, 15, 15, 15, 15, 15, 5, 5, 5};
+const uint8_t pulseHi[] PROGMEM = {100, 100, 100, 100, 100, 106, 106, 106, 106, 106, 112, 112, 112, 112, 112, 118, 118, 118, 118, 118, 124, 124, 124, 124, 124, 130, 130, 130, 130, 130, 136, 136, 136, 136, 136, 142, 142, 142, 142, 142, 148, 148, 148, 148, 148, 154, 154, 154, 154, 154, 160, 160, 160, 160, 160, 166, 166, 166, 166, 166, 172, 172, 172, 172, 172, 178, 178, 178, 178, 178, 184, 184, 184, 184, 184, 190, 190, 190, 190, 190, 196, 196, 196, 196, 196, 202, 202, 202, 202, 202, 208, 208, 208, 208, 208, 214, 214, 214, 214, 214, 220, 220, 220, 220, 220, 226, 226, 226, 226, 226, 232, 232, 232, 232, 232, 238, 238, 238, 238, 238, 244, 244, 244, 244, 244, 250, 250, 250};
+
+
+
 /* starts the PWM output */
 
 void initPWM(void)
 {
-    TCCR0A = 0;     // take the defaults
-    TCCR0B = 0x02;  // clock divide by 8
-    OCR0B  = 100;   // compare register
-    TIMSK0 |= 0x04;  // enable timer compare B  (A is used by softuart)
+    TCCR0A = 0;       // take the defaults
+    TCCR0B = 0x02;    // clock divide
+    OCR0B  = 200;     // compare register
+    TIMSK0 |= 0x04;   // enable timer IRQ
 }
 
-uint8_t wavdir = 0;
-uint8_t pwmHigh = 5;
-uint8_t pwmLow  = 250;
+volatile uint8_t wavdir = 1;
+volatile uint8_t pwmHi =  250;
+volatile uint8_t pwmLo  = 1;
+volatile uint8_t pwmdir = 1;
 
 /* PWM Output on Servo 0 if configured */
 
+#define PWMMAX 160
+
 ISR(TIM0_COMPB_vect)
 {
-    wavdir ^= 1;
     if (wavdir)
     {
-        OCR0B = pwmHigh;
-        PORTA |= SERVO0;
+        if(pwmdir)
+           PORTA |= SERVO0;
+        else
+           PORTA |= SERVO1;
+           
+        OCR0B = pwmHi;
+        wavdir = 0;
     }        
     else
     {
-        OCR0B = pwmLow;
-        PORTA &= ~SERVO0;
-    }           
+        if(pwmdir)
+          PORTA &= ~SERVO0;
+          else
+          PORTA &= ~SERVO1;
+          
+        OCR0B = pwmLo;
+        wavdir = 1;
+    }        
+        
     TCNT0 = 0;
-    
 }
-
 
 /* pwm low and high */
 
-void setPWM(uint8_t pw)
+/* 250 max hi
+     5 lowest lo
+     
+*/
+
+
+#define OFS 2
+void setPWM(uint8_t pw, uint8_t dir)
 {
-    pw ++;
-    if (pw>124) pw = 124;
-    pwmHigh = pw;
-    pwmLow  = 0x7f - pw;
+    pw = pw & 0x7f;
+    pwmdir = dir;
+    
+    pw++;
+    
+    pwmHi =  pgm_read_byte(&pulseHi[pw]);
+    pwmLo =  pgm_read_byte(&pulseLo[pw]);
+  
+  //  pwmHi = 10;
+  //  pwmLo = 200;
+      
+    if (pwmdir)
+        PORTA &= ~SERVO1;
+    else
+        PORTA &= ~SERVO0;
 }
 
 /* starts both the servo cycle and the master 1ms clock source */

@@ -1,0 +1,65 @@
+/*
+ * CV Map for AirRx
+ *
+ *   CV 201 - Radio Channel 0-15
+ *   CV 202 - DCC Address lo
+ *   CV 203 - DCC Address hi
+ *   CV 204 - Servo Mode 0=Steam, 1=couplers, 2=ESC, 3=PWM
+ *   CV 205 - Servo0 LowLimit Lo
+ *   CV 206 - Servo0 LowLimit Hi
+ *   CV 207 - Servo0 HighLimit Lo
+ *   CV 208 - Servo0 HighLimit Hi
+ *   CV 209 - Servo0 Reverse
+ *   CV 210 - Servo1 LowLimit Lo
+ *   CV 211 - Servo1 LowLimit Hi
+ *   CV 212 - Servo1 HighLimit Lo
+ *   CV 213 - Servo1 HighLimit Hi
+ *   CV 214 - Servo1 Reverse
+ *   CV 215 - Function Code for Coupler 0
+ *   CV 216 - Function Code for Coupler 1
+ *   CV 217 - Function Code for Output x
+ *   CV 218 - Function Code for Output y
+ *   CV 219 - On/Off Code for Output x
+ *   CV 220 - On/Off Code for Output y
+ *   CV 230 - Reset to factory defaults
+ */
+
+ 
+Below is a diagram of the pins on the Receiver. These are standard R/C connections, 
+the pins closest to the edge of the board are ground, the pins in the middle are +3v and 
+the pins nearest the chip are the signal pins.
+
+Note that this is a THREE (3.3) volt device, do not hook 5v to it for any length of time!
+
+   Y   X  s1  s0   D   3v
+   |   |   |   |   |   |________ Power Connection (+3v)
+   |   |   |   |   |____________ DCC logic level out
+   |   |   |   |________________ Servo 0 (Throttle)
+   |   |   |____________________ Servo 1 (Direction in Steam mode)
+   |   |________________________ Digital Output X
+   |____________________________ Digital Output Y
+
+
+These are marked on the board.
+
+------------------------------------------------------------------------
+
+CVs
+ 
+Note that the DCC address defaults to 3. To change to any other address 
+greater that 256 you must first convert the address to hex. Then take 
+the upper and lower bytes and convert them to decimal. Enter those as 
+address low and address high.  The same must be done for the servo limits.
+
+Example:	1220   address or servo limit
+convert:	1220 into hex is hex 04C4
+upper is	04 = 4 decimal
+lower is	C4 = 196 decimal
+program lower first, then upper.
+
+If you need to reset to the factory defaults and can't communicate 
+with the receiver, use a jumper to connect pin 3 of the processor 
+chip to ground and power up the receiver.  Remove power and the 
+jumper, then power up as normal.
+
+

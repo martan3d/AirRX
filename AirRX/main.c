@@ -19,6 +19,8 @@
 #include "dcc.h"
 #include "eedata.h"
 
+void initEEPROM();
+
 static volatile uint8_t rawbuff[7];
 static volatile uint8_t flagbyte;
 
@@ -340,29 +342,6 @@ void checkOurFunctionCodes()
       }
 }
 
-/*
- * Setup only, initialize the EEPROM with defaults
- *
- */
-
-void initEEPROM()
-{
-    setEEAirwireChannel(0);
-    setEEDCCAddress(3);
-    setEEServoHi(0, 1000);
-    setEEServoHi(1, 1000);
-    setEEServoLow(0, 0);
-    setEEServoLow(1, 0);
-    setEEServoReverse(0, 0);
-    setEEServoReverse(1, 0);
-    setEEServoMode(0);
-    setEEFunctionOutput(0,4);
-    setEEFunctionOutput(1,4);
-    setEEFunctionState(0,1);
-    setEEFunctionState(1,1);
-    setEECouplerfunctionCode(0,16);
-    setEECouplerfunctionCode(1,16);
-}
 
 /*
  * Decode message packets here and do servos and config variables
@@ -552,6 +531,33 @@ void checkConfigurationCode(uint8_t addr, uint8_t data)
 }
 
 
+/*
+ * Setup only, initialize the EEPROM with defaults
+ *
+ */
+
+void initEEPROM()
+{
+    setEEAirwireChannel(0);
+    setEEDCCAddress(3);
+    setEEServoHi(0, 1000);
+    setEEServoHi(1, 1000);
+    setEEServoLow(0, 0);
+    setEEServoLow(1, 0);
+    setEEServoReverse(0, 0);
+    setEEServoReverse(1, 0);
+    setEEServoMode(3);           // 0 Steam, 1 couplers, 2 ESC, 3 PWM
+    setEEFunctionOutput(0,4);
+    setEEFunctionOutput(1,4);
+    setEEFunctionState(0,1);
+    setEEFunctionState(1,1);
+    setEECouplerfunctionCode(0,16);
+    setEECouplerfunctionCode(1,16);
+}
+
+
+
+
 /* 
  * Main Loop
  *
@@ -566,7 +572,7 @@ int main(void)
     DDRB |= 0x01;    // PB0 = output
     DDRA |= 0x0f;    // PA0-PA3 outputs
     
-    //initEEPROM();
+    initEEPROM();
     
     if(getEEProgrammed() != 0)   /** First time power up, set all to defaults **/
     {
@@ -574,7 +580,7 @@ int main(void)
         setEEProgrammed(0);
     }
     
-    // check port pin B2 - if low, initialize EEPROM *** USER FACTORY RESET  ***  NEED to test this
+    // check port pin B1 - if low, initialize EEPROM *** USER FACTORY RESET  ***
  
     if ( (PINB & 0x02) == 0 )
     {
@@ -835,12 +841,12 @@ int main(void)
                     break;
                     
                     case PWM:
-                            if (direction == FORWARD)
-                               PORTA |= 0x02;
-                            else
-                               PORTA &= ~0x02;
+                            //if (direction == FORWARD)
+                            //   PORTA |= 0x02;
+                            //else
+                            //   PORTA &= ~0x02;
 
-                            setPWM(dccspeed);
+                            setPWM(dccspeed, direction);
                     break;
                 }
             }      
