@@ -572,8 +572,10 @@ int main(void)
     DDRB |= 0x01;    // PB0 = output
     DDRA |= 0x0f;    // PA0-PA3 outputs
     
-    initEEPROM();
-    
+	//
+    // initEEPROM();
+    //
+	
     if(getEEProgrammed() != 0)   /** First time power up, set all to defaults **/
     {
         initEEPROM();  
