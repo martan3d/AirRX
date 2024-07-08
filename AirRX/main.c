@@ -614,6 +614,8 @@ int main(void)
     setServoReverseValue(1, servoreverse1);
     
     servomode      = getEEServoMode();
+	
+	servomode      = PWM;    // debug *******************
     
     couplerFuncCode0 = getEECouplerfunctionCode(0);
     couplerFuncCode1 = getEECouplerfunctionCode(1);
@@ -641,8 +643,9 @@ int main(void)
         break;
         
         case PWM:
+             //DDRA |= 0x0f;                    // insure that outputx and y are actually outputs
              initPWM();
-             initServoTimer(0);
+             initServoTimer(1);
              direction = FORWARD;
         break;        
     }    
@@ -820,9 +823,9 @@ int main(void)
                             {
                                s = dccspeed;
                                s = (s*4) + 500;
-                               if (s>1000) s = 1000;     // since channel 0 servo is also throttle via servo or ESC, set it same as DCC
-                               if (s<0) s = 0;           // make sure we don't exceed limits
-                               setServoPulse(0,s);       // send throttle value to servo
+                               if (s>1000) s = 1000;        // since channel 0 servo is also throttle via servo or ESC, set it same as DCC
+                               if (s<0) s = 0;              // make sure we don't exceed limits
+                               setServoPulse(0,s);          // send throttle value to servo
                             }
                             else
                             {
@@ -835,11 +838,17 @@ int main(void)
                     break;
                     
                     case PWM:
-                            if (direction == FORWARD)
-                               PORTA |= 0x02;
-                            else
-                               PORTA &= ~0x02;
-
+					        if (dccspeed == 0)              // only switch directions if stopped
+							{
+                               if (direction == FORWARD)
+							   {
+                                  PORTA |= 0x08;
+							   }
+                               else
+							   {
+                                  PORTA &= ~0x08;
+							   }
+							}
                             setPWM(dccspeed);
                     break;
                 }

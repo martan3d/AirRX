@@ -3,6 +3,11 @@
  *
  * Created: 11/3/2017 7:22:26 PM
  * Author : martan
+ 
+ * Moved PWM output to outputX and output Y to preserve the servo functionality 2024
+ * added sense of 1 (lowest speed) flatlines the motor driver output.
+ 
+ 
  */ 
 
 
@@ -34,6 +39,9 @@
 
  #define SERVO0       0x01          /* define servo outputs port bits */
  #define SERVO1       0x02
+ 
+ #define OUTPUTX      0x04
+ #define OUTPUTY      0x08
 
 /* Handle Three Servo outputs on PORTA bits 0-2 */
 
@@ -77,16 +85,23 @@ uint8_t pwmLow  = 250;
 
 ISR(TIM0_COMPB_vect)
 {
+	
+	if(pwmHigh == 1)   /* slow as we can go, just make the output flatline low to prevent creep*/
+	{
+		PORTA &= ~OUTPUTX;
+		return;
+	}
+	
     wavdir ^= 1;
     if (wavdir)
     {
         OCR0B = pwmHigh;
-        PORTA |= SERVO0;
+        PORTA |= OUTPUTX;
     }        
     else
     {
         OCR0B = pwmLow;
-        PORTA &= ~SERVO0;
+        PORTA &= ~OUTPUTX;
     }           
     TCNT0 = 0;
     
