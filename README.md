@@ -1,11 +1,13 @@
 # AirRX
 Attiny84A Airwire RX implementation
 
-Uses Anaren CC1101 daughterboard
-spi.c is configured for it
+Updated July 10 2024
 
-Can use ElectroHouse CC1101 as a receiver
-https://www.elechouse.com/elechouse/index.php?main_page=product_info&cPath=90_92&products_id=2148&zenid=16tdir9l0utclk1vu69j48dbd4
-spi.c has configuration for this one commented out.
+Uses Anaren CC1101 daughterboard or Darrell's custom CC1101 clone board
+
+spi.c can be configured for either
+
+Use 'ElectroHouse' in spi.c for the clone board,
+'Anaren' for genuine anaren chipset
 
 
