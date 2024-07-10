@@ -14,7 +14,6 @@
 #include <avr/interrupt.h>
 
 #include "servotimer.h"
-#include "softUART.h"
 #include "spi.h"
 #include "dcc.h"
 #include "eedata.h"
@@ -55,8 +54,46 @@ uint8_t couplerFuncCode0 = 0;
 uint8_t couplerFuncCode1 = 0;
 
 uint8_t fcode = 0;
+
+
+                  // 28 step table. The 5th bit is used in an odd way, this is why the numbers look a bit odd - see the table in the DCC spec
+				  
+/*
+s    bits   index
+
+00 = 00000  00
+01 = 00000  00
+02 = 10010  18
+03 = 00011  03
+04 = 10011  19
+05 = 00100  04
+06 = 10100  20
+07 = 00101  05
+08 = 10101  21
+09 = 00110  06
+10 = 10110  22
+11 = 00111  07
+12 = 10111  23
+13 = 01000  08
+14 = 11000  24
+15 = 01001  09
+16 = 11001  25
+17 = 01010  10
+18 = 11010  26
+19 = 01011  11
+20 = 11011  27
+21 = 01100  12
+22 = 11100  28
+23 = 01101  13
+24 = 11101  29
+25 = 01110  14
+26 = 11110  30
+27 = 01111  15
+28 = 11111  31
+*/
+				  
                   //     00  01  02  03  04  05  06  07  08  09  10  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27  28  29  30  31
-uint8_t stepTable[]  = {  0,  0,  1,  3,  5,  7,  9, 11, 13, 15, 17, 19, 21, 23, 25, 27,  0,  0,  2,  4,  6, 8,  10, 12, 14, 16, 18, 20, 22, 24, 26, 28 };
+uint8_t stepTable[]  = {  0,  0,  1,  3,  5,  7,  9, 11, 13, 15, 17, 19, 21, 23, 25, 27,  0,  0,  2,  4,  6,  8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28 };
 
 #define FORWARD 0
 #define REVERSE 1
@@ -67,18 +104,6 @@ uint8_t stepTable[]  = {  0,  0,  1,  3,  5,  7,  9, 11, 13, 15, 17, 19, 21, 23,
 #define ESC 2
 #define PWM 3
 
-
-void sendDebug()
-{
-    for(int i=0;i<6;i++)                    // send it out on the soft uart
-    {
-        while(1)
-        {
-            if(UART_tx(rawbuff[i]))
-            break;
-        }
-    }
-}
 
 
 /* function code came in, do we care? Check our stored function code, did it come in? */
@@ -654,10 +679,7 @@ int main(void)
     startModem(radioChannel);
     dccInit();
     
-    //UART_init();  // ****** software usart, for debug only, take this out for production
-        
     sei();                                   // enable interrupts
-
 
     /**************************************************************************************************************/
     
@@ -849,6 +871,7 @@ int main(void)
                                   PORTA &= ~0x08;
 							   }
 							}
+							
                             setPWM(dccspeed);
                     break;
                 }

@@ -66,7 +66,6 @@ static volatile uint16_t msUpper;
 
 uint16_t normalMs = ONEMS;
 
-
 /* starts the PWM output */
 
 void initPWM(void)
@@ -114,8 +113,9 @@ void setPWM(uint8_t pw)
 {
     pw ++;
     if (pw>124) pw = 124;
+	
     pwmHigh = pw;
-    pwmLow  = 0x7f - pw;
+    pwmLow  = 255 - pw;
 }
 
 /* starts both the servo cycle and the master 1ms clock source */
