@@ -142,12 +142,6 @@
     <Compile Include="servotimer.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="softUART.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="softUART.h">
-      <SubType>compile</SubType>
-    </Compile>
     <Compile Include="spi.c">
       <SubType>compile</SubType>
     </Compile>
