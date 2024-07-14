@@ -95,14 +95,14 @@ s    bits   index
                   //     00  01  02  03  04  05  06  07  08  09  10  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27  28  29  30  31
 uint8_t stepTable[]  = {  0,  0,  1,  3,  5,  7,  9, 11, 13, 15, 17, 19, 21, 23, 25, 27,  0,  0,  2,  4,  6,  8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28 };
 
-#define FORWARD 0
-#define REVERSE 1
 #define TRUE 1
 #define FALSE 0
 #define STEAM 0
 #define COUPLERS 1
 #define ESC 2
 #define PWM 3
+
+
 
 
 
@@ -395,7 +395,7 @@ void initEEPROM()
  *   CV 201 - Radio Channel 0-15
  *   CV 202 - DCC Address lo
  *   CV 203 - DCC Address hi
- *   CV 204 - Servo Mode 0=Steam, 1=couplers, 2=ESC
+ *   CV 204 - Servo Mode 0=Steam, 1=couplers, 2=ESC, 4=CYTRON PWM, 5=DRV8871
  *   CV 205 - Servo0 LowLimit Lo
  *   CV 206 - Servo0 LowLimit Hi
  *   CV 207 - Servo0 HighLimit Lo
@@ -640,7 +640,7 @@ int main(void)
     
     servomode      = getEEServoMode();
 	
-	servomode      = PWM;    // debug *******************
+	servomode      = DRV8871;    // debug *******************
     
     couplerFuncCode0 = getEECouplerfunctionCode(0);
     couplerFuncCode1 = getEECouplerfunctionCode(1);
@@ -668,8 +668,10 @@ int main(void)
         break;
         
         case PWM:
-             //DDRA |= 0x0f;                    // insure that outputx and y are actually outputs
-             initPWM();
+		case CYTRON:
+		case DRV8871:
+		
+             initPWM(servomode);
              initServoTimer(1);
              direction = FORWARD;
         break;        
@@ -860,19 +862,7 @@ int main(void)
                     break;
                     
                     case PWM:
-					        if (dccspeed == 0)              // only switch directions if stopped
-							{
-                               if (direction == FORWARD)
-							   {
-                                  PORTA |= 0x08;
-							   }
-                               else
-							   {
-                                  PORTA &= ~0x08;
-							   }
-							}
-							
-                            setPWM(dccspeed);
+                            setPWM(direction, dccspeed);
                     break;
                 }
             }      
