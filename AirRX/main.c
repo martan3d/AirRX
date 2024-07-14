@@ -640,7 +640,7 @@ int main(void)
     
     servomode      = getEEServoMode();
 	
-	servomode      = DRV8871;    // debug *******************
+	servomode      = CYTRON;    // debug *******************
     
     couplerFuncCode0 = getEECouplerfunctionCode(0);
     couplerFuncCode1 = getEECouplerfunctionCode(1);
@@ -862,7 +862,9 @@ int main(void)
                     break;
                     
                     case PWM:
-                            setPWM(direction, dccspeed);
+					case CYTRON:
+					case DRV8871:
+		                            setPWM(direction, dccspeed);
                     break;
                 }
             }      
