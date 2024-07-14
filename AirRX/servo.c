@@ -14,6 +14,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <string.h>
+#include "spi.h"
 #include "servotimer.h" 
 #include "eedata.h"
 
@@ -59,6 +60,9 @@ static volatile uint8_t servo1Dir = 0;
 
 static volatile uint8_t servostate;
 
+static volatile uint8_t pwmmode = CYTRON;
+static volatile uint8_t pwmOutput = OUTPUTX;
+
  // set up the clock so it runs at 1us per tick
 
 static volatile uint16_t msClock;
@@ -68,26 +72,33 @@ uint16_t normalMs = ONEMS;
 
 /* starts the PWM output */
 
-void initPWM(void)
+void initPWM(uint8_t mode)
 {
     TCCR0A = 0;     // take the defaults
     TCCR0B = 0x02;  // clock divide by 8
     OCR0B  = 100;   // compare register
     TIMSK0 |= 0x04;  // enable timer compare B  (A is used by softuart)
+
+    // in Cytron mode, only the output X is used for pulses, OUTPUTY is high or low for direction
+	// for the DRV8817, OUTPUTX pulses are used for forward, OUTPUTY pulses are for backwards
+	// default it to X in either case
+
+    pwmOutput = OUTPUTX;
+	pwmmode = mode;
 }
 
 uint8_t wavdir = 0;
 uint8_t pwmHigh = 5;
 uint8_t pwmLow  = 250;
 
-/* PWM Output on Servo 0 if configured */
+/* PWM Output if configured */
 
 ISR(TIM0_COMPB_vect)
 {
 	
-	if(pwmHigh == 1)   /* slow as we can go, just make the output flatline low to prevent creep*/
+	if(pwmHigh <= 2)   /* slow as we can go, just make the output flatline low to prevent creep*/
 	{
-		PORTA &= ~OUTPUTX;
+		PORTA &= ~pwmOutput;
 		return;
 	}
 	
@@ -95,28 +106,59 @@ ISR(TIM0_COMPB_vect)
     if (wavdir)
     {
         OCR0B = pwmHigh;
-        PORTA |= OUTPUTX;
+        PORTA |= pwmOutput;
     }        
     else
     {
         OCR0B = pwmLow;
-        PORTA &= ~OUTPUTX;
+        PORTA &= ~pwmOutput;
     }           
     TCNT0 = 0;
     
 }
 
 
+
 /* pwm low and high */
 
-void setPWM(uint8_t pw)
+void setPWM(uint8_t direction, uint8_t pw)
 {
-    pw ++;
-    if (pw>124) pw = 124;
+     if (pw == 0)              // only switch directions if stopped
+        {
+			switch(pwmmode)
+			{
+			  case CYTRON:
+					if (direction == FORWARD)
+					{
+						PORTA |= OUTPUTY;
+					}
+					else
+					{
+						PORTA &= ~OUTPUTY;
+					}
+					break;
+					
+			 case DRV8871:
+					if (direction == FORWARD)
+					{
+						pwmOutput = OUTPUTX;
+					}
+					else
+					{
+						pwmOutput = OUTPUTY;
+					}
+					break;
+			}
+		}
+	
+	pw = pw*2;
+	
+    if (pw>250) pw = 250;
 	
     pwmHigh = pw;
     pwmLow  = 255 - pw;
 }
+
 
 /* starts both the servo cycle and the master 1ms clock source */
 
