@@ -864,7 +864,7 @@ int main(void)
                     case PWM:
 					case CYTRON:
 					case DRV8871:
-		                            setPWM(direction, dccspeed);
+		                      setPWM(direction, dccspeed);
                     break;
                 }
             }      
