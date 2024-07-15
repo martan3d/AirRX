@@ -88,7 +88,7 @@ void initPWM(uint8_t mode)
 }
 
 uint8_t wavdir = 0;
-uint8_t pwmHigh = 5;
+uint8_t pwmHigh = 2;
 uint8_t pwmLow  = 250;
 
 /* PWM Output if configured */
