@@ -84,6 +84,8 @@ void initPWM(uint8_t mode)
 	// default it to X in either case
 
     pwmOutput = OUTPUTX;
+	PORTA &= ~OUTPUTX;     // make sure both are low as we could be in DRV8871 mode
+	PORTA &= ~OUTPUTY;
 	pwmmode = mode;
 }
 
