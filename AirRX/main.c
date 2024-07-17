@@ -56,7 +56,7 @@ uint8_t couplerFuncCode1 = 0;
 uint8_t fcode = 0;
 
 
-                  // 28 step table. The 5th bit is used in an odd way, this is why the numbers look a bit odd - see the table in the DCC spec
+// 28 step table. The 5th bit is used in an odd way, this is why the numbers are off in this list - see the table in the DCC spec
 				  
 /*
 s    bits   index
@@ -457,7 +457,7 @@ void checkConfigurationCode(uint8_t addr, uint8_t data)
                           
                 case 204: // Servo Mode
                           if(cvd<0) break;
-                          if(cvd>3) break;       // allow pwm mode now
+                          if(cvd>5) break;       // allow pwm mode through cytron and drv8871 now
                           setEEServoMode(cvd);
                           servomode = cvd;
                           break;
@@ -640,7 +640,7 @@ int main(void)
     
     servomode      = getEEServoMode();
 	
-	servomode      = CYTRON;    // debug *******************
+	servomode      = DRV8871;    // debug *******************
     
     couplerFuncCode0 = getEECouplerfunctionCode(0);
     couplerFuncCode1 = getEECouplerfunctionCode(1);
