@@ -720,8 +720,17 @@ int main(void)
                              break;
                          }
                         
-                         checkOurFunctionCodes();
-                         
+                         switch(servomode)
+						 {
+							 case PWM:
+							 case CYTRON:
+							 case DRV8871:
+							      break;
+								  
+						     default:
+							      checkOurFunctionCodes();
+							 }
+							 
                       break;
                 
       
@@ -773,7 +782,16 @@ int main(void)
                            if (rxaddress != dccaddress)
                              break;
                                                       
-                           checkOurFunctionCodes();
+                           switch(servomode)
+                           {
+	                           case PWM:
+	                           case CYTRON:
+	                           case DRV8871:
+	                                break;
+	                         
+	                           default:
+	                                checkOurFunctionCodes();
+                           }
    
                            break;
                          
