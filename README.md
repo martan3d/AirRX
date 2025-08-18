@@ -7,13 +7,14 @@ spi.c can be configured for the following radio modules:
 - Anaren CC1101 daughterboard
 - Darrell's custom CC1101 clone board (I have some of these, just ask)
 - ElecHome board
+Range is generally about 100ft with the Anaren or the Custom boards
 
 This implementation has the following features
 - DCC output via Airwire
 - Two servos can be controlled, servo 0 follows the DCC throttle for live steam applications
 - programming of receiver parameters via CV commands
 
-Also has PWM output if you don't want to use DCC, it works with:
+PWM output is available if you don't want to use DCC or ESC, it works with:
 - Cytron
 - Adafruit DRV8871
 
