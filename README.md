@@ -3,10 +3,13 @@ Attiny84A Airwire RX implementation
 
 Updated July 2024 - made public July 2025
 
+Revisions and Code Clean up, minor bug fixes via Claude Code August 2026
+
 spi.c can be configured for the following radio modules:
 - Anaren CC1101 daughterboard
 - Darrell's custom CC1101 clone board (I have some of these, just ask)
-- ElecHome board
+- ElecHome board, other clones
+- Currently, the code is setup for the official Anaren Chipset
 
 This implementation has the following features
 - DCC output via Airwire
