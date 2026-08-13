@@ -264,6 +264,5 @@ void setEEServoReverse(uint8_t sn, uint8_t mode)
         case 1:
                eeprom_write_byte( (uint8_t*) &ServoReverse1, mode );
                break;
-        break;
     }        
 }

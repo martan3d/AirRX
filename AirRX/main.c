@@ -281,30 +281,8 @@ void checkOurFunctionCodes()
     fcode = checkFunctionCodes(functioncode0, rawbuff[1], rawbuff[2]);
     if( fcode != -1)
       {
-          if (fcode == 1)
-             {
-               if (functionstate0 == 1)     // check off state, if one, flip to off
-                   PORTA &= 0xfb;
-                else
-                   PORTA |= 0x04;            // if off state is zero, its on now
-               
-               if (functionstate0 == 0)      // check off state, if zero, flip to on
-                   PORTA |= 0x04;            // if off state is zero, its on now
-                else
-                   PORTA &= 0xfb;
-             }
-             else
-             {
-               if (functionstate0 == 1)     // check off state, if one, flip to off
-                   PORTA |= 0x04;            // if off state is zero, its on now
-               else
-                   PORTA &= 0xfb;
-              
-               if (functionstate0 == 0)     // check off state, if zero, flip to on
-                   PORTA &= 0xfb;
-               else
-                   PORTA |= 0x04;            // if off state is zero, its on now
-            }
+         if (fcode == 1)
+            PORTA = (functionstate0 == 1) ? (PORTA | 0x04) : (PORTA & 0xfb);
       }
                          
     /* check the second physical output, did a function code trigger it ? */
@@ -313,29 +291,7 @@ void checkOurFunctionCodes()
     if( fcode != -1)
        {
          if (fcode == 1)
-             {
-               if (functionstate1 == 1)     // check off state, if one, flip to off
-                   PORTA &= 0xf7;
-                 else
-                   PORTA |= 0x08;            // if off state is zero, its on now
-               
-               if (functionstate1 == 0)     // check off state, if zero, flip to on
-                   PORTA |= 0x08;            // if off state is zero, its on now
-                 else
-                   PORTA &= 0xf7;
-             }
-            else
-             {
-               if (functionstate1 == 1)     // check off state, if one, flip to off
-                   PORTA |= 0x08;            // if off state is zero, its on now
-                 else
-                   PORTA &= 0xf7;
-              
-               if (functionstate1 == 0)     // check off state, if zero, flip to on
-                   PORTA &= 0xf7;
-                 else
-                   PORTA |= 0x08;            // if off state is zero, its on now
-             }
+	          PORTA = (functionstate1 == 1) ? (PORTA | 0x08) : (PORTA & 0xf7);
        }
                          
              
@@ -380,7 +336,7 @@ void initEEPROM()
     setEEServoLow(1, 0);
     setEEServoReverse(0, 0);
     setEEServoReverse(1, 0);
-    setEEServoMode(0);
+    setEEServoMode(ESC);
     setEEFunctionOutput(0,4);
     setEEFunctionOutput(1,4);
     setEEFunctionState(0,1);
@@ -415,12 +371,14 @@ void initEEPROM()
  *   CV 230 - Reset to factory defaults
  */
 
-static volatile uint16_t temp;
+
+uint8_t lastaddr;
 
 void checkConfigurationCode(uint8_t addr, uint8_t data)
 {
     // command is  1110CCVV VVVVVVVV DDDDDDDD
-    
+	
+    uint16_t temp;    
     uint16_t cvd;
     uint8_t mdata;
     
@@ -432,7 +390,6 @@ void checkConfigurationCode(uint8_t addr, uint8_t data)
             switch(addr)
             {
                 case 201:
-                          if(mdata < 0)  break;
                           if(mdata > 16) break;
                           setEEAirwireChannel(mdata);
                           radioChannel = mdata;
@@ -443,7 +400,7 @@ void checkConfigurationCode(uint8_t addr, uint8_t data)
                           temp = mdata;
                           break;  
                           
-                case 203: // DCC address high byte
+                case 203: // DCC address high byte - temp should be filled by 202 CV first, this is an operator mandate
                           temp &= 0x00ff;
                           mdata = cvd & 0x00ff;
                           temp |= (cvd<<8);
@@ -456,7 +413,6 @@ void checkConfigurationCode(uint8_t addr, uint8_t data)
                           break;
                           
                 case 204: // Servo Mode
-                          if(cvd<0) break;
                           if(cvd>5) break;       // allow pwm mode through cytron and drv8871 now
                           setEEServoMode(cvd);
                           servomode = cvd;
@@ -488,8 +444,8 @@ void checkConfigurationCode(uint8_t addr, uint8_t data)
                           servohigh0 = temp;
                           break;
 
-                case 209: if (cvd>1) break;
-                          if (cvd<0) break;
+                case 209: 
+				          cvd &= 0x01;
                           servoreverse0 = cvd;
                           setServoReverseValue(0, cvd);
                           setEEServoReverse(0, cvd);
@@ -521,8 +477,8 @@ void checkConfigurationCode(uint8_t addr, uint8_t data)
                           servohigh1 = temp;
                           break;
                           
-                case 214: if (cvd>1) break;
-                          if (cvd<0) break;
+                case 214:
+                          cvd &= 0x01;
                           servoreverse1 = cvd;
                           setServoReverseValue(1, cvd);
                           setEEServoReverse(1, cvd);
@@ -530,27 +486,23 @@ void checkConfigurationCode(uint8_t addr, uint8_t data)
                           
                           //*** Servo 0 Coupler Mode FUNCTION CODE *****
                 case 215:
-                          if(cvd < 0)  break;
                           if(cvd > 28) break;
                           setEECouplerfunctionCode(0, cvd);
                           break;
 
                           //*** Servo 1 Coupler Mode FUNCTION CODE *******
                 case 216:
-                          if(cvd < 0)  break;
                           if(cvd > 28) break;
                           setEECouplerfunctionCode(1, cvd);
                           break;
 
                 case 217: // ***** Function code for OUTPUT X ****
-                          if(cvd < 0)  break;
                           if(cvd > 28) break;
                           setEEFunctionOutput(0,cvd);
                           functioncode0 = cvd;
                           break;
 
                 case 218: // ***** Function code for OUTPUT Y ***
-                          if(cvd < 0)  break;
                           if(cvd > 28) break;
                           setEEFunctionOutput(1,cvd);
                           functioncode1 = cvd;
@@ -558,14 +510,12 @@ void checkConfigurationCode(uint8_t addr, uint8_t data)
 
                           // **** Digital Outputs default (OFF) State
                 case 219:
-                          if(cvd < 0) cvd = 0;
-                          if(cvd > 1) cvd = 1;
+				          cvd &= 0x01;
                           setEEFunctionState(0, cvd);
                           break;
 
                 case 220:
-                          if(cvd < 0) cvd = 0;
-                          if(cvd > 1) cvd = 1;
+				          cvd &= 0x01;
                           setEEFunctionState(1, cvd);
                           break;
                           
@@ -574,6 +524,8 @@ void checkConfigurationCode(uint8_t addr, uint8_t data)
                           initEEPROM();
                           break;
         }
+		
+		lastaddr = addr;
 }
 
 
@@ -640,7 +592,7 @@ int main(void)
     
     servomode      = getEEServoMode();
 	
-	servomode      = DRV8871;    // debug *******************
+	//servomode      = DRV8871;    // debug *******************
     
     couplerFuncCode0 = getEECouplerfunctionCode(0);
     couplerFuncCode1 = getEECouplerfunctionCode(1);
@@ -688,10 +640,13 @@ int main(void)
     while (1)
     {
         /* wait for DCC message to be constructed via interrupt */
-      
+		
         if (flagbyte)
         {
+			cli();
             getDCC(rawbuff);                       // pass our buffer to dcc to retrieve data
+			sei();
+			
             msglen = rawbuff[5];                   // get length of message
             ouraddress = FALSE;                    // plan to ignore
             
@@ -712,10 +667,12 @@ int main(void)
                          if( (rawbuff[1] & 0x40) == 0x040)     // 28 Speed instruction?
                          {
                              dccspeed = stepTable[rawbuff[1] & 0x1f] * 4;
-                             if (rawbuff[1] & 0x20)
-                                   direction = FORWARD;        // translate the 28 step to 128
-                                else                           // everything internal to this code is 128 now
-                                   direction = REVERSE;
+                             if (rawbuff[1] & 0x20) {
+                                  direction = FORWARD;
+								} 
+                             else {
+                                  direction = REVERSE;    // output x to one
+								}
                                    
                              break;
                          }
@@ -729,6 +686,7 @@ int main(void)
 								  
 						     default:
 							      checkOurFunctionCodes();
+								  break;
 							 }
 							 
                       break;
@@ -744,11 +702,12 @@ int main(void)
                         
                              ouraddress = TRUE;           // sent 128 step instruction, no action required
                              dccspeed = rawbuff[2];       // get speed and direction
-                             if (dccspeed & 0x80)
-                                direction = FORWARD;
-                             else
-                                direction = REVERSE;
-
+                             if (dccspeed & 0x80) {
+                                  direction = FORWARD;
+								}
+                             else {
+                                  direction = REVERSE;    // output x to one
+								}
                              dccspeed = dccspeed & 0x7f;  // remove the direction bit from the speed value
                              break;
                            }
@@ -767,10 +726,12 @@ int main(void)
                              ouraddress = TRUE;               
 
                              dccspeed = stepTable[rawbuff[2] & 0x1f] * 4;
-                             if (rawbuff[2] & 0x20)
-                                   direction = FORWARD;
-                                else
-                                   direction = REVERSE;
+                             if (rawbuff[2] & 0x20) {
+                                  direction = FORWARD;
+								} 
+                             else {
+                                  direction = REVERSE;    // output x to one
+								}
                              break;
                            }                           
                            
@@ -790,7 +751,8 @@ int main(void)
 	                                break;
 	                         
 	                           default:
-	                                checkOurFunctionCodes();
+	                                checkOurFunctionCodes();    //**** DEBUG
+									break;
                            }
    
                            break;
@@ -808,10 +770,12 @@ int main(void)
                              ouraddress = TRUE;
                              
                              dccspeed = rawbuff[3];
-                             if (dccspeed & 0x80)
-                                direction = FORWARD;
-                             else
-                                direction = REVERSE;
+                             if (dccspeed & 0x80) {
+                                  direction = FORWARD;
+								} 
+                             else {
+                                  direction = REVERSE;    // output x to one
+								}
                              dccspeed = dccspeed & 0x7f;
                              break;
                           }
@@ -823,7 +787,7 @@ int main(void)
                              if (rxaddress != dccaddress)
                                break;
                               
-                             checkConfigurationCode(rawbuff[2], rawbuff[3]);
+                              checkConfigurationCode(rawbuff[2], rawbuff[3]);
                           }
                           break;
 
@@ -849,11 +813,14 @@ int main(void)
                 switch(servomode)    // coupler mode is handled in function codes
                 {
                     case STEAM:                             // Steam mode?
-                            if (direction == FORWARD)       // for live steam, servo 1 is direction
+                            if (direction == FORWARD) {     // for live steam, servo 1 is direction
                                setServoPulse(1,servohigh1); // high limit is forward
-                            else
+                               PORTA &= 0xf7;               // output x to zero
+							}
+                            else {
                                setServoPulse(1,servolow1);  // low limit is reverse
-                    
+							   PORTA |= 0x08;
+							}
                             s = dccspeed * 10;              // 128 max steps is a bit over servo max of 1000
                             if(s>1000) s = 1000;            // since channel 0 servo is also throttle via servo or ESC, set it same as DCC
                             if (s<0) s = 0;                 // make sure we don't exceed limits

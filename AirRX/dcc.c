@@ -26,16 +26,16 @@ void setFlag();
 // Any variables that are used between the ISR and other functions are declared volatile
 unsigned int i;
 
-uint8_t BitCount;
-uint8_t State;
-uint8_t iState;
-uint8_t dataByte;
-uint8_t byteCounter;
-uint8_t buffer[sizeof(DCC_MSG)+1];
-uint8_t DccBitVal = 0;
-uint8_t errorByte = 0;
+static volatile uint8_t BitCount;
+static volatile uint8_t State;
+static volatile uint8_t iState;
+static volatile uint8_t dataByte;
+static volatile uint8_t byteCounter;
+static volatile uint8_t buffer[sizeof(DCC_MSG)+1];
+static volatile uint8_t DccBitVal = 0;
+static volatile uint8_t errorByte = 0;
 
-static volatile uint8_t dccbuff[sizeof(DCC_MSG)];
+static volatile uint8_t dccbuff[sizeof(DCC_MSG)+1];
 
 static volatile int16_t usec;
 static volatile int16_t dnow;

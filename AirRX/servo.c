@@ -60,7 +60,7 @@ static volatile uint8_t servo1Dir = 0;
 
 static volatile uint8_t servostate;
 
-static volatile uint8_t pwmmode = CYTRON;
+static volatile uint8_t pwmmode = 0xFF;
 static volatile uint8_t pwmOutput = OUTPUTX;
 
  // set up the clock so it runs at 1us per tick
@@ -219,33 +219,33 @@ ISR(TIM1_COMPA_vect)
     switch(servostate)
     {
         case SERVOIDLE:
-        PORTA &= SERVOSOFF;
-        OCR1A += ONEMS;
-        servostate = STARTSERVO0;
+             PORTA &= SERVOSOFF;
+             OCR1A = TCNT1 + ONEMS;
+             servostate = STARTSERVO0;
         break;
         
         case STARTSERVO0:
-        PORTA |= SERVO0;
-        OCR1A += ServoPulseMs0;
-        servostate = WAITSERVO0;
+             PORTA |= SERVO0;
+             OCR1A = TCNT1 + ServoPulseMs0;
+             servostate = WAITSERVO0;
         break;
 
         case WAITSERVO0:
-        PORTA &= ~(SERVO0);
-        OCR1A += ONEMS;
-        servostate = STARTSERVO1;
+             PORTA &= ~(SERVO0);
+             OCR1A = TCNT1 + ONEMS;
+             servostate = STARTSERVO1;
         break;
         
         case STARTSERVO1:
-        PORTA |= SERVO1;
-        OCR1A += ServoPulseMs1;
-        servostate = ENDSERVO;
+             PORTA |= SERVO1;
+             OCR1A = TCNT1 + ServoPulseMs1;
+             servostate = ENDSERVO;
         break;
         
         case ENDSERVO:
-        PORTA &= ~(SERVO1);
-        OCR1A += ENDSCAN;
-        servostate = SERVOIDLE;
+             PORTA &= ~(SERVO1);
+             OCR1A = TCNT1 + ENDSCAN;
+             servostate = SERVOIDLE;
         break;
     }
 }
