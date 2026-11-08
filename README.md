@@ -7,9 +7,8 @@ Revisions and Code Clean up, minor bug fixes via Claude Code August 2026
 
 spi.c can be configured for the following radio modules:
 - Anaren CC1101 daughterboard
-- Darrell's custom CC1101 clone board (I have some of these, just ask)
-- ElecHome board, other clones
-- Currently, the code is setup for the official Anaren Chipset
+- Ebyte  CC1101 daughterboard
+- Configure the code for Ebyte or Anaren in boardconfig.h
 
 This implementation has the following features
 - DCC output via Airwire
