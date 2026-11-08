@@ -25,6 +25,9 @@ PCB is the .bac file, use with Bay Area Circuits free PCB designer.
 
 https://bayareacircuits.com/
 
+I sell these boards assembled and tested at: http://blueridgeengineering.net/
+
+
 The following table shows the CV commands used to program the receiver
 
  * CV Map for AirRx
